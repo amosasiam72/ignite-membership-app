@@ -1,0 +1,28 @@
+# Firebase
+firebase-app/.firebase/
+firebase-app/firebase-debug.log
+firebase-app/database-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.local
+.env.*.local
