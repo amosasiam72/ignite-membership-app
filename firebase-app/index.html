@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ignite Chapel Membership</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="Ignite chapel no bg.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="loading-screen" style="position:fixed;inset:0;background:#0D0D0D;display:flex;align-items:center;justify-content:center;z-index:9999">
+        <div style="text-align:center">
+            <div class="spinner" style="width:40px;height:40px;border:4px solid #333;border-top-color:#E31E24;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem"></div>
+            <p style="color:#888;font-size:14px">Loading...</p>
+        </div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <div id="public-screen" class="public-container hidden">
+        <div class="public-content">
+            <img src="Ignite chapel no bg.png" alt="Ignite" class="public-logo">
+            <h1>Ignite Chapel Membership</h1>
+            <p class="public-subtitle">Join our family and let us celebrate you!</p>
+
+            <div class="public-actions">
+                <button id="go-to-register" class="public-btn primary">
+                    <span class="btn-icon">📝</span>
+                    <span class="btn-text">Register as a Member</span>
+                    <span class="btn-desc">Add your details for birthday celebrations</span>
+                </button>
+                <button id="go-to-update" class="public-btn secondary">
+                    <span class="btn-icon">️</span>
+                    <span class="btn-text">Update Your Details</span>
+                    <span class="btn-desc">Change your info or upload a new photo</span>
+                </button>
+            </div>
+
+            <div class="admin-link">
+                <a href="#" id="go-to-admin">Admin Login</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-screen" class="login-container hidden">
+        <div class="login-box">
+            <img src="Ignite chapel no bg.png" alt="Ignite" class="login-logo">
+            <h1>Admin Login</h1>
+            <p class="login-subtitle">Sign in to access the dashboard</p>
+            <form id="login-form" novalidate>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="admin@ignitechapel.com" required>
+                </div>
+                <div class="form-group password-group">
+                    <label for="login-password">Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="login-password" placeholder="Enter password" required>
+                        <button type="button" class="password-toggle" id="password-toggle" aria-label="Toggle password visibility">
+                            <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+            <p class="register-link"><a href="#" id="go-to-public-from-login">← Back to Home</a></p>
+        </div>
+    </div>
+
+    <div id="register-screen" class="login-container hidden">
+        <div class="register-box">
+            <img src="Ignite chapel no bg.png" alt="Ignite" class="register-logo">
+            <h1>Member Registration</h1>
+            <p class="register-subtitle">Join Ignite Chapel family</p>
+            <form id="register-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reg-firstName">First Name *</label>
+                        <input type="text" id="reg-firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-lastName">Last Name *</label>
+                        <input type="text" id="reg-lastName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-dob">Date of Birth *</label>
+                        <input type="date" id="reg-dob" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-phone">Phone *</label>
+                        <input type="tel" id="reg-phone" required>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-pin">Secret PIN (4 digits) *</label>
+                        <input type="password" id="reg-pin" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" placeholder="1234" required>
+                        <p class="form-hint">You'll need this to update your details later</p>
+                    </div>
+                </div>
+                <h3 class="form-section-title">Social Media (optional)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reg-instagram">Instagram</label>
+                        <input type="text" id="reg-instagram" placeholder="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-tiktok">TikTok</label>
+                        <input type="text" id="reg-tiktok" placeholder="username">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reg-photo">Profile Photo</label>
+                    <input type="file" id="reg-photo" accept="image/*">
+                    <p class="form-hint">Upload a clear photo for your birthday flyer</p>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Registration</button>
+                <p id="register-error" class="error-message"></p>
+                <p id="register-success" class="success-message hidden"></p>
+            </form>
+            <p class="register-link"><a href="#" id="go-to-public-from-register">← Back to Home</a></p>
+        </div>
+    </div>
+
+    <div id="update-screen" class="login-container hidden">
+        <div class="register-box">
+            <img src="Ignite chapel no bg.png" alt="Ignite" class="register-logo">
+            <h1>Update Your Details</h1>
+            <p class="register-subtitle">Search for your name to update your information</p>
+
+            <div id="update-search-step">
+                <form id="update-search-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="search-firstName">First Name *</label>
+                            <input type="text" id="search-firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="search-lastName">Last Name *</label>
+                            <input type="text" id="search-lastName" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Search</button>
+                    <p id="update-search-error" class="error-message"></p>
+                </form>
+            </div>
+
+            <div id="update-verify-step" class="hidden">
+                <p id="update-found-msg" class="success-message" style="margin-bottom: 1rem;"></p>
+                <p style="color: var(--text-secondary); text-align: center; margin-bottom: 1rem;">Enter your secret PIN to verify your identity.</p>
+                <form id="update-verify-form">
+                    <input type="hidden" id="verify-member-id">
+                    <div class="form-group">
+                        <label for="verify-pin">Secret PIN</label>
+                        <input type="password" id="verify-pin" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" placeholder="Enter your 4-digit PIN" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Verify & Edit</button>
+                    <p id="verify-error" class="error-message"></p>
+                </form>
+                <p style="margin-top: 1rem; text-align: center;"><a href="#" id="back-to-search-from-verify" style="color: var(--text-secondary);">← Try a different name</a></p>
+            </div>
+
+            <div id="update-edit-step" class="hidden">
+                <p style="color: var(--success); text-align: center; margin-bottom: 1rem;">✅ Identity verified! You can now update your details.</p>
+                <form id="update-form">
+                    <input type="hidden" id="update-member-id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="upd-firstName">First Name</label>
+                            <input type="text" id="upd-firstName">
+                        </div>
+                        <div class="form-group">
+                            <label for="upd-lastName">Last Name</label>
+                            <input type="text" id="upd-lastName">
+                        </div>
+                        <div class="form-group">
+                            <label for="upd-dob">Date of Birth</label>
+                            <input type="date" id="upd-dob">
+                        </div>
+                        <div class="form-group">
+                            <label for="upd-phone">Phone</label>
+                            <input type="tel" id="upd-phone">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="upd-email">Email</label>
+                        <input type="email" id="upd-email">
+                    </div>
+                    <h3 class="form-section-title">Social Media</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="upd-instagram">Instagram</label>
+                            <input type="text" id="upd-instagram" placeholder="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="upd-tiktok">TikTok</label>
+                            <input type="text" id="upd-tiktok" placeholder="username">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="upd-photo">Profile Photo</label>
+                        <input type="file" id="upd-photo" accept="image/*">
+                        <p class="form-hint">Upload a new photo for your birthday flyer</p>
+                        <div id="upd-photo-preview" class="hidden" style="margin-top: 0.5rem;">
+                            <img id="upd-photo-img" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+                    <p id="update-error" class="error-message"></p>
+                    <p id="update-success" class="success-message hidden"></p>
+                </form>
+                <p style="margin-top: 1rem;"><a href="#" id="back-to-search" style="color: var(--text-secondary);">← Search for someone else</a></p>
+            </div>
+
+            <p class="register-link" style="margin-top: 1.5rem;"><a href="#" id="go-to-public-from-update">← Back to Home</a></p>
+        </div>
+    </div>
+
+    <div id="app" class="hidden">
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="#" class="nav-brand" data-page="dashboard">
+                    <img src="Ignite chapel no bg.png" alt="Ignite" class="nav-logo"> Ignite Chapel
+                </a>
+                <ul class="nav-links">
+                    <li><a href="#" data-page="dashboard" class="active">Dashboard</a></li>
+                    <li><a href="#" data-page="members">Members</a></li>
+                    <li><a href="#" data-page="events">Events</a></li>
+                    <li><a href="#" data-page="settings">Flyer Settings</a></li>
+                </ul>
+                <button id="logout-btn" class="btn btn-sm">Logout</button>
+            </div>
+        </nav>
+
+        <main class="container">
+            <div id="messages-container"></div>
+
+            <div id="page-dashboard" class="page active">
+                <div class="dashboard-header">
+                    <h1> Welcome to Ignite Chapel Membership</h1>
+                    <p class="subtitle">Track members, celebrate birthdays, and manage events</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number" id="stat-total">0</span>
+                        <span class="stat-label">Total Members</span>
+                    </div>
+                    <div class="stat-card birthday-highlight">
+                        <span class="stat-number" id="stat-month">0</span>
+                        <span class="stat-label">Birthdays This Month</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="stat-events">0</span>
+                        <span class="stat-label">Upcoming Events</span>
+                    </div>
+                </div>
+
+                <div id="birthday-today-section" class="section hidden">
+                    <h2>🎂 Birthdays Today!</h2>
+                    <div id="birthday-today-grid" class="birthday-grid"></div>
+                </div>
+
+                <div class="section">
+                    <h2> Upcoming Birthdays</h2>
+                    <div id="upcoming-birthdays" class="upcoming-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>🎉 Upcoming Events</h2>
+                    <div id="upcoming-events-dashboard" class="event-preview"></div>
+                </div>
+            </div>
+
+            <div id="page-members" class="page">
+                <div class="page-header">
+                    <h1>Members</h1>
+                    <button id="add-member-btn" class="btn btn-primary">+ Add Member</button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="member-search" placeholder="Search by name or email...">
+                </div>
+
+                <div id="members-grid" class="member-grid"></div>
+            </div>
+
+            <div id="page-events" class="page">
+                <div class="page-header">
+                    <h1>Events</h1>
+                    <button id="add-event-btn" class="btn btn-primary">+ Add Event</button>
+                </div>
+
+                <div class="section">
+                    <h2>Upcoming Events</h2>
+                    <div id="upcoming-events-list" class="event-list"></div>
+                </div>
+
+                <div class="section" id="past-events-section">
+                    <h2>Recent Past Events</h2>
+                    <div id="past-events-list" class="event-list"></div>
+                </div>
+            </div>
+
+            <div id="page-member-detail" class="page">
+                <div id="member-detail-content"></div>
+            </div>
+
+            <div id="page-event-detail" class="page">
+                <div id="event-detail-content"></div>
+            </div>
+
+            <div id="page-settings" class="page">
+                <div class="page-header">
+                    <h1>🎨 Flyer Editor</h1>
+                    <div class="editor-actions">
+                        <button id="flyer-preview-btn" class="btn">Preview</button>
+                        <button id="save-settings-btn" class="btn btn-primary">Save Template</button>
+                    </div>
+                </div>
+                
+                <div class="editor-layout">
+                    <div class="editor-canvas-pane">
+                        <div class="preview-canvas-wrapper" id="canvas-wrapper">
+                            <canvas id="settings-preview-canvas" width="1280" height="1280"></canvas>
+                            <div id="editor-tooltip" class="editor-tooltip hidden">Click an element to select it, then drag to move</div>
+                        </div>
+                    </div>
+                    <div class="editor-sidebar">
+                        <div class="editor-section">
+                            <h4>Background</h4>
+                            <div class="editor-upload-area">
+                                <input type="file" id="settings-template-upload" accept="image/*" hidden>
+                                <button id="settings-upload-btn" class="btn btn-sm">Upload Template</button>
+                                <button id="settings-reset-btn" class="btn btn-sm">Reset</button>
+                            </div>
+                        </div>
+                        
+                        <div class="editor-section">
+                            <h4>Layers</h4>
+                            <div id="editor-layers">
+                                <div class="editor-layer" data-element="photo">
+                                    <span class="layer-icon">🖼️</span>
+                                    <span class="layer-name">Photo</span>
+                                    <label class="layer-toggle"><input type="checkbox" id="settings-photo-enabled" checked> <span>Show</span></label>
+                                </div>
+                                <div class="editor-layer" data-element="name">
+                                    <span class="layer-icon">📝</span>
+                                    <span class="layer-name">Name</span>
+                                    <label class="layer-toggle"><input type="checkbox" id="settings-name-enabled" checked> <span>Show</span></label>
+                                </div>
+                                <div class="editor-layer" data-element="date">
+                                    <span class="layer-icon">📅</span>
+                                    <span class="layer-name">Date</span>
+                                    <label class="layer-toggle"><input type="checkbox" id="settings-date-enabled" checked> <span>Show</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="editor-section" id="editor-controls">
+                            <h4>Controls</h4>
+                            <p class="form-hint" style="margin-bottom:0.75rem;">Select an element on the canvas to edit it.</p>
+                            <div id="controls-placeholder" class="controls-placeholder">Click on Photo, Name, or Date in the preview to edit</div>
+                            
+                            <div id="controls-photo" class="controls-group hidden">
+                                <div class="form-group">
+                                    <label>Size (px)</label>
+                                    <input type="range" id="settings-photo-size" min="50" max="600" value="300">
+                                    <span class="range-value" id="photo-size-val">300</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Border</label>
+                                    <input type="range" id="settings-photo-border-size" min="0" max="30" value="0">
+                                    <span class="range-value" id="photo-border-val">0</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Border Color</label>
+                                    <input type="color" id="settings-photo-border-color" value="#ffffff">
+                                </div>
+                            </div>
+                            
+                            <div id="controls-name" class="controls-group hidden">
+                                <div class="form-group">
+                                    <label>Font Size</label>
+                                    <input type="range" id="settings-name-size" min="14" max="120" value="56">
+                                    <span class="range-value" id="name-size-val">56</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <input type="color" id="settings-name-color" value="#ffffff">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bold</label>
+                                    <input type="checkbox" id="settings-name-bold" checked>
+                                </div>
+                            </div>
+                            
+                            <div id="controls-date" class="controls-group hidden">
+                                <div class="form-group">
+                                    <label>Font Size</label>
+                                    <input type="range" id="settings-date-size" min="14" max="100" value="32">
+                                    <span class="range-value" id="date-size-val">32</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <input type="color" id="settings-date-color" value="#ffffff">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bold</label>
+                                    <input type="checkbox" id="settings-date-bold" checked>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- hidden inputs for legacy save compatibility -->
+                <input type="hidden" id="settings-photo-x" value="640">
+                <input type="hidden" id="settings-photo-y" value="400">
+                <input type="hidden" id="settings-name-x" value="640">
+                <input type="hidden" id="settings-name-y" value="770">
+                <input type="hidden" id="settings-date-x" value="640">
+                <input type="hidden" id="settings-date-y" value="840">
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; <span id="current-year"></span> Ignite Chapel. Built with ❤️ for the media team.</p>
+        </footer>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div id="modal" class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title"></h2>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div id="modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="flyer-canvas-container" class="hidden"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="flyer-template.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
