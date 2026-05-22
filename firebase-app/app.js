@@ -646,6 +646,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Fallback: hide loading screen after 3s regardless of auth state
+    setTimeout(() => {
+        const loading = document.getElementById('loading-screen');
+        if (loading && !loading.classList.contains('hidden')) {
+            loading.classList.add('hidden');
+        }
+    }, 3000);
+
     auth.onAuthStateChanged(async user => {
         if (user) {
             currentUser = user;
