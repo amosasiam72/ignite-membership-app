@@ -17,6 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
         dateY: 830,
         dateSize: 30,
         dateColor: '#ffffff',
+        nameXNoPhoto: 640,
+        nameYNoPhoto: 640,
+        nameSizeNoPhoto: 52,
+        nameColorNoPhoto: '#ffffff',
+        dateXNoPhoto: 640,
+        dateYNoPhoto: 720,
+        dateSizeNoPhoto: 30,
+        dateColorNoPhoto: '#ffffff',
         templateImage: null,
         templateImageNoPhoto: null
     };
@@ -36,6 +44,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let previewTemplateImage = null;
+    let editorMode = 'photo';
+
+    function switchEditorMode(mode) {
+        const was = editorMode;
+        if (mode === was) return;
+        // Save current form values into the old mode's settings
+        saveFormToSettings(was);
+        editorMode = mode;
+        // Load the new mode's settings into form
+        loadSettingsToForm(mode);
+        // Update tab UI
+        document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+        // Show/hide photo layer
+        document.querySelector('.editor-layer[data-element="photo"]')?.classList.toggle('hidden', mode === 'nophoto');
+        // Update template preview
+        loadPreviewTemplateForMode(mode);
+        drawSettingsPreview();
+        if (selectedElement && (mode === 'nophoto' && selectedElement === 'photo')) {
+            showControls(null);
+        }
+    }
+
+    function saveFormToSettings(mode) {
+        if (!flyerSettings) return;
+        const suffix = mode === 'nophoto' ? 'NoPhoto' : '';
+        flyerSettings[`nameX${suffix}`] = parseInt(document.getElementById('settings-name-x').value) || 640;
+        flyerSettings[`nameY${suffix}`] = parseInt(document.getElementById('settings-name-y').value) || 770;
+        flyerSettings[`nameSize${suffix}`] = parseInt(document.getElementById('settings-name-size').value) || 52;
+        flyerSettings[`nameColor${suffix}`] = document.getElementById('settings-name-color').value || '#ffffff';
+        flyerSettings[`dateX${suffix}`] = parseInt(document.getElementById('settings-date-x').value) || 640;
+        flyerSettings[`dateY${suffix}`] = parseInt(document.getElementById('settings-date-y').value) || 830;
+        flyerSettings[`dateSize${suffix}`] = parseInt(document.getElementById('settings-date-size').value) || 30;
+        flyerSettings[`dateColor${suffix}`] = document.getElementById('settings-date-color').value || '#ffffff';
+    }
+
+    function loadSettingsToForm(mode) {
+        if (!flyerSettings) return;
+        const suffix = mode === 'nophoto' ? 'NoPhoto' : '';
+        document.getElementById('settings-name-x').value = flyerSettings[`nameX${suffix}`] ?? 640;
+        document.getElementById('settings-name-y').value = flyerSettings[`nameY${suffix}`] ?? 770;
+        document.getElementById('settings-name-size').value = flyerSettings[`nameSize${suffix}`] ?? 52;
+        document.getElementById('settings-name-color').value = flyerSettings[`nameColor${suffix}`] ?? '#ffffff';
+        const nsVal = document.querySelector('#name-size-val');
+        if (nsVal) nsVal.textContent = document.getElementById('settings-name-size').value;
+        document.getElementById('settings-date-x').value = flyerSettings[`dateX${suffix}`] ?? 640;
+        document.getElementById('settings-date-y').value = flyerSettings[`dateY${suffix}`] ?? 830;
+        document.getElementById('settings-date-size').value = flyerSettings[`dateSize${suffix}`] ?? 30;
+        document.getElementById('settings-date-color').value = flyerSettings[`dateColor${suffix}`] ?? '#ffffff';
+        const dsVal = document.querySelector('#date-size-val');
+        if (dsVal) dsVal.textContent = document.getElementById('settings-date-size').value;
+    }
+
+    function loadPreviewTemplateForMode(mode) {
+        const src = mode === 'nophoto'
+            ? (flyerSettings?.templateImageNoPhoto || FLYER_TEMPLATE)
+            : (flyerSettings?.templateImage || FLYER_TEMPLATE);
+        if (!previewTemplateImage || previewTemplateImage._src !== src) {
+            previewTemplateImage = new Image();
+            previewTemplateImage._src = src;
+            previewTemplateImage.onload = () => drawSettingsPreview();
+            previewTemplateImage.src = src;
+        }
+    }
     
     async function drawSettingsPreview() {
         const canvas = document.getElementById('settings-preview-canvas');
@@ -63,7 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameEnabled = document.getElementById('settings-name-enabled').checked;
         const dateEnabled = document.getElementById('settings-date-enabled').checked;
         
-        const templateSrc = flyerSettings && flyerSettings.templateImage ? flyerSettings.templateImage : FLYER_TEMPLATE;
+        const templateSrc = editorMode === 'nophoto'
+            ? (flyerSettings && flyerSettings.templateImageNoPhoto ? flyerSettings.templateImageNoPhoto : FLYER_TEMPLATE)
+            : (flyerSettings && flyerSettings.templateImage ? flyerSettings.templateImage : FLYER_TEMPLATE);
         
         const render = async () => {
             ctx.clearRect(0, 0, 1280, 1280);
@@ -249,6 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-date-bold').checked = true;
         document.getElementById('settings-date-x').value = flyerSettings.dateX;
         document.getElementById('settings-date-y').value = flyerSettings.dateY;
+        
+        // NoPhoto hidden inputs are loaded implicitly via loadSettingsToForm on tab switch
     }
 
     function updateDrawSettingsPreview() {
@@ -256,8 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const hiddenX = document.getElementById(`settings-${selectedElement}-x`);
             const hiddenY = document.getElementById(`settings-${selectedElement}-y`);
             if (hiddenX && hiddenY) {
-                flyerSettings[`${selectedElement}X`] = parseInt(hiddenX.value);
-                flyerSettings[`${selectedElement}Y`] = parseInt(hiddenY.value);
+                const suffix = editorMode === 'nophoto' && selectedElement !== 'photo' ? 'NoPhoto' : '';
+                flyerSettings[`${selectedElement}X${suffix}`] = parseInt(hiddenX.value);
+                flyerSettings[`${selectedElement}Y${suffix}`] = parseInt(hiddenY.value);
             }
         }
         drawSettingsPreview();
@@ -265,8 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showControls(element) {
         ['photo', 'name', 'date'].forEach(el => {
-            document.getElementById(`controls-${el}`).classList.toggle('hidden', el !== element);
-            document.querySelector(`[data-element="${el}"]`).classList.toggle('active', el === element);
+            const show = el === element && !(el === 'photo' && editorMode === 'nophoto');
+            document.getElementById(`controls-${el}`).classList.toggle('hidden', !show);
+            document.querySelector(`[data-element="${el}"]`)?.classList.toggle('active', show);
         });
         document.getElementById('controls-placeholder').classList.toggle('hidden', !!element);
         selectedElement = element;
@@ -286,15 +363,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function hitTestElement(cx, cy) {
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
         const elements = [];
-        if (document.getElementById('settings-photo-enabled').checked) {
+        const suffix = editorMode === 'nophoto' ? 'NoPhoto' : '';
+        if (editorMode === 'photo' && document.getElementById('settings-photo-enabled').checked) {
             const s = settings.photoSize || 300;
             elements.push({ name: 'photo', x: settings.photoX, y: settings.photoY, hitR: Math.max(PHOTO_W, PHOTO_H) * 0.5 });
         }
         if (document.getElementById('settings-name-enabled').checked) {
-            elements.push({ name: 'name', x: settings.nameX, y: settings.nameY, hitR: settings.nameSize * 1.2 });
+            const nx = settings[`nameX${suffix}`];
+            const ny = settings[`nameY${suffix}`];
+            const ns = settings[`nameSize${suffix}`];
+            elements.push({ name: 'name', x: nx, y: ny, hitR: (ns || 52) * 1.2 });
         }
         if (document.getElementById('settings-date-enabled').checked) {
-            elements.push({ name: 'date', x: settings.dateX, y: settings.dateY, hitR: settings.dateSize * 1.2 });
+            const dx = settings[`dateX${suffix}`];
+            const dy = settings[`dateY${suffix}`];
+            const ds = settings[`dateSize${suffix}`];
+            elements.push({ name: 'date', x: dx, y: dy, hitR: (ds || 30) * 1.2 });
         }
         for (const el of elements) {
             const dist = Math.sqrt((cx - el.x) ** 2 + (cy - el.y) ** 2);
@@ -341,8 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const hiddenX = document.getElementById(`settings-${selectedElement}-x`);
             const hiddenY = document.getElementById(`settings-${selectedElement}-y`);
             if (hiddenX && hiddenY) {
-                flyerSettings[`${selectedElement}X`] = parseInt(hiddenX.value);
-                flyerSettings[`${selectedElement}Y`] = parseInt(hiddenY.value);
+                const suffix = editorMode === 'nophoto' && selectedElement !== 'photo' ? 'NoPhoto' : '';
+                flyerSettings[`${selectedElement}X${suffix}`] = parseInt(hiddenX.value);
+                flyerSettings[`${selectedElement}Y${suffix}`] = parseInt(hiddenY.value);
             }
         }
         isDragging = false;
@@ -359,22 +444,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Editor mode tabs
+    document.querySelectorAll('.editor-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            switchEditorMode(tab.dataset.mode);
+        });
+    });
+
     // Range sliders live update
     document.querySelectorAll('#editor-controls input[type="range"]').forEach(slider => {
-        const valDisplay = document.getElementById(slider.id.replace('settings-', '').replace(/-/g, '-') + '-val');
-        // Simplified: find the display span next to the slider
         const updateSlider = () => {
             const parent = slider.closest('.form-group');
             if (parent) {
                 const valSpan = parent.querySelector('.range-value');
                 if (valSpan) valSpan.textContent = slider.value;
             }
+            const suffix = editorMode === 'nophoto' ? 'NoPhoto' : '';
             if (slider.id === 'settings-photo-size' || slider.id === 'settings-photo-border-size') {
-                flyerSettings[slider.id.replace('settings-photo-', '')] = parseInt(slider.value);
+                if (editorMode === 'photo') {
+                    flyerSettings[slider.id.replace('settings-photo-', '')] = parseInt(slider.value);
+                }
             } else if (slider.id === 'settings-name-size') {
-                flyerSettings.nameSize = parseInt(slider.value);
+                flyerSettings[`nameSize${suffix}`] = parseInt(slider.value);
             } else if (slider.id === 'settings-date-size') {
-                flyerSettings.dateSize = parseInt(slider.value);
+                flyerSettings[`dateSize${suffix}`] = parseInt(slider.value);
             }
             drawSettingsPreview();
         };
@@ -384,12 +477,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Color pickers
     document.querySelectorAll('#editor-controls input[type="color"]').forEach(picker => {
         picker.addEventListener('input', () => {
+            const suffix = editorMode === 'nophoto' ? 'NoPhoto' : '';
             if (picker.id === 'settings-photo-border-color') {
-                flyerSettings.photoBorderColor = picker.value;
+                if (editorMode === 'photo') flyerSettings.photoBorderColor = picker.value;
             } else if (picker.id === 'settings-name-color') {
-                flyerSettings.nameColor = picker.value;
+                flyerSettings[`nameColor${suffix}`] = picker.value;
             } else if (picker.id === 'settings-date-color') {
-                flyerSettings.dateColor = picker.value;
+                flyerSettings[`dateColor${suffix}`] = picker.value;
             }
             drawSettingsPreview();
         });
@@ -417,12 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const compressedBase64 = await compressImage(file, 1280, 0.75);
                 if (!flyerSettings) flyerSettings = { ...DEFAULT_FLYER_SETTINGS };
                 flyerSettings.templateImage = compressedBase64;
-                previewTemplateImage = new Image();
-                previewTemplateImage.onload = () => {
-                    drawSettingsPreview();
-                    showToast('Template loaded!');
-                };
-                previewTemplateImage.src = compressedBase64;
+                if (editorMode !== 'photo') switchEditorMode('photo');
+                loadPreviewTemplateForMode('photo');
             }
         });
     }
@@ -432,9 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             if (flyerSettings) flyerSettings.templateImage = null;
-            previewTemplateImage = new Image();
-            previewTemplateImage.onload = () => drawSettingsPreview();
-            previewTemplateImage.src = FLYER_TEMPLATE;
+            if (editorMode !== 'photo') switchEditorMode('photo');
+            loadPreviewTemplateForMode('photo');
             showToast('Template reset to default');
         });
     }
@@ -451,12 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const compressedBase64 = await compressImage(file, 1280, 0.75);
                 if (!flyerSettings) flyerSettings = { ...DEFAULT_FLYER_SETTINGS };
                 flyerSettings.templateImageNoPhoto = compressedBase64;
-                previewTemplateImage = new Image();
-                previewTemplateImage.onload = () => {
-                    drawSettingsPreview();
-                    showToast('No-photo template loaded!');
-                };
-                previewTemplateImage.src = compressedBase64;
+                if (editorMode !== 'nophoto') switchEditorMode('nophoto');
+                loadPreviewTemplateForMode('nophoto');
             }
         });
     }
@@ -466,9 +551,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resetNoPhotoBtn) {
         resetNoPhotoBtn.addEventListener('click', () => {
             if (flyerSettings) flyerSettings.templateImageNoPhoto = null;
-            previewTemplateImage = new Image();
-            previewTemplateImage.onload = () => drawSettingsPreview();
-            previewTemplateImage.src = FLYER_TEMPLATE;
+            if (editorMode !== 'nophoto') switchEditorMode('nophoto');
+            loadPreviewTemplateForMode('nophoto');
             showToast('No-photo template reset to default');
         });
     }
@@ -478,6 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
             showToast('Saving settings...', 'success');
+            // Save whichever mode is active to flyerSettings first
+            saveFormToSettings(editorMode);
             const data = {
                 photoEnabled: document.getElementById('settings-photo-enabled').checked,
                 photoSize: parseInt(document.getElementById('settings-photo-size').value) || 300,
@@ -485,14 +571,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 photoY: parseInt(document.getElementById('settings-photo-y').value) || 400,
                 photoBorderSize: parseInt(document.getElementById('settings-photo-border-size').value) || 0,
                 photoBorderColor: document.getElementById('settings-photo-border-color').value || '#ffffff',
-                nameX: parseInt(document.getElementById('settings-name-x').value) || 640,
-                nameY: parseInt(document.getElementById('settings-name-y').value) || 770,
-                nameSize: parseInt(document.getElementById('settings-name-size').value) || 56,
-                nameColor: document.getElementById('settings-name-color').value || '#ffffff',
-                dateX: parseInt(document.getElementById('settings-date-x').value) || 640,
-                dateY: parseInt(document.getElementById('settings-date-y').value) || 840,
-                dateSize: parseInt(document.getElementById('settings-date-size').value) || 32,
-                dateColor: document.getElementById('settings-date-color').value || '#ffffff',
+                nameX: flyerSettings.nameX,
+                nameY: flyerSettings.nameY,
+                nameSize: flyerSettings.nameSize,
+                nameColor: flyerSettings.nameColor,
+                dateX: flyerSettings.dateX,
+                dateY: flyerSettings.dateY,
+                dateSize: flyerSettings.dateSize,
+                dateColor: flyerSettings.dateColor,
+                nameXNoPhoto: flyerSettings.nameXNoPhoto,
+                nameYNoPhoto: flyerSettings.nameYNoPhoto,
+                nameSizeNoPhoto: flyerSettings.nameSizeNoPhoto,
+                nameColorNoPhoto: flyerSettings.nameColorNoPhoto,
+                dateXNoPhoto: flyerSettings.dateXNoPhoto,
+                dateYNoPhoto: flyerSettings.dateYNoPhoto,
+                dateSizeNoPhoto: flyerSettings.dateSizeNoPhoto,
+                dateColorNoPhoto: flyerSettings.dateColorNoPhoto,
                 updatedAt: new Date().toISOString()
             };
             if (flyerSettings && flyerSettings.templateImage) {
@@ -963,6 +1057,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'settings':
                 document.getElementById('page-settings').classList.add('active');
                 populateSettingsForm();
+                editorMode = 'photo';
+                loadSettingsToForm('photo');
+                loadPreviewTemplateForMode('photo');
+                document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'photo'));
+                document.querySelector('.editor-layer[data-element="photo"]')?.classList.remove('hidden');
                 drawSettingsPreview();
                 break;
         }
@@ -1635,6 +1734,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
         const hasPhoto = !!m.photo;
+        const sfx = hasPhoto ? '' : 'NoPhoto';
         const templateSrc = hasPhoto
             ? (settings.templateImage || FLYER_TEMPLATE)
             : (settings.templateImageNoPhoto || FLYER_TEMPLATE);
@@ -1647,8 +1747,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
             }
 
-            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings.nameX, settings.nameY, settings.nameSize, settings.nameColor);
-            drawCustomText(ctx, dateStr, settings.dateX, settings.dateY, settings.dateSize, settings.dateColor);
+            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings[`nameX${sfx}`], settings[`nameY${sfx}`], settings[`nameSize${sfx}`], settings[`nameColor${sfx}`]);
+            drawCustomText(ctx, dateStr, settings[`dateX${sfx}`], settings[`dateY${sfx}`], settings[`dateSize${sfx}`], settings[`dateColor${sfx}`]);
         };
         bgImg.onerror = async () => {
             ctx.fillStyle = '#0F172A';
@@ -1658,8 +1758,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
             }
 
-            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings.nameX, settings.nameY, settings.nameSize, settings.nameColor);
-            drawCustomText(ctx, dateStr, settings.dateX, settings.dateY, settings.dateSize, settings.dateColor);
+            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings[`nameX${sfx}`], settings[`nameY${sfx}`], settings[`nameSize${sfx}`], settings[`nameColor${sfx}`]);
+            drawCustomText(ctx, dateStr, settings[`dateX${sfx}`], settings[`dateY${sfx}`], settings[`dateSize${sfx}`], settings[`dateColor${sfx}`]);
         };
         bgImg.src = templateSrc;
     };
