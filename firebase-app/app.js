@@ -646,19 +646,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function checkDuplicateMember(firstName, lastName, email, phone, excludeId = null) {
-        const constraints = [];
-        if (email) constraints.push(db.collection('members').where('email', '==', email));
-        if (firstName && lastName) {
-            constraints.push(db.collection('members').where('firstName', '==', firstName).where('lastName', '==', lastName));
-        }
-        if (constraints.length === 0) return null;
-        const results = await Promise.all(constraints.map(q => q.get()));
-        for (const snap of results) {
-            if (!snap.empty) {
-                const doc = snap.docs[0];
-                if (excludeId && doc.id === excludeId) continue;
-                return 'A member with this name or email is already registered.';
-            }
+        if (!firstName || !lastName) return null;
+        const snap = await db.collection('members')
+            .where('firstName', '==', firstName)
+            .where('lastName', '==', lastName)
+            .get();
+        for (const doc of snap.docs) {
+            if (excludeId && doc.id === excludeId) continue;
+            return 'A member with this name is already registered.';
         }
         return null;
     }
