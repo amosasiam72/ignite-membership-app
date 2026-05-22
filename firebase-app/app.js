@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dateY: 830,
         dateSize: 30,
         dateColor: '#ffffff',
-        templateImage: null
+        templateImage: null,
+        templateImageNoPhoto: null
     };
 
     async function loadFlyerSettings() {
@@ -438,6 +439,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // No-photo template upload handler
+    const uploadNoPhotoInput = document.getElementById('settings-template-nophoto-upload');
+    const uploadNoPhotoBtn = document.getElementById('settings-upload-nophoto-btn');
+    if (uploadNoPhotoBtn && uploadNoPhotoInput) {
+        uploadNoPhotoBtn.addEventListener('click', () => uploadNoPhotoInput.click());
+        uploadNoPhotoInput.addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (file) {
+                showToast('Loading no-photo template...', 'success');
+                const compressedBase64 = await compressImage(file, 1280, 0.75);
+                if (!flyerSettings) flyerSettings = { ...DEFAULT_FLYER_SETTINGS };
+                flyerSettings.templateImageNoPhoto = compressedBase64;
+                previewTemplateImage = new Image();
+                previewTemplateImage.onload = () => {
+                    drawSettingsPreview();
+                    showToast('No-photo template loaded!');
+                };
+                previewTemplateImage.src = compressedBase64;
+            }
+        });
+    }
+
+    // Reset no-photo template button
+    const resetNoPhotoBtn = document.getElementById('settings-reset-nophoto-btn');
+    if (resetNoPhotoBtn) {
+        resetNoPhotoBtn.addEventListener('click', () => {
+            if (flyerSettings) flyerSettings.templateImageNoPhoto = null;
+            previewTemplateImage = new Image();
+            previewTemplateImage.onload = () => drawSettingsPreview();
+            previewTemplateImage.src = FLYER_TEMPLATE;
+            showToast('No-photo template reset to default');
+        });
+    }
+
     // Save handler
     const saveBtn = document.getElementById('save-settings-btn');
     if (saveBtn) {
@@ -462,6 +497,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             if (flyerSettings && flyerSettings.templateImage) {
                 data.templateImage = flyerSettings.templateImage;
+            }
+            if (flyerSettings && flyerSettings.templateImageNoPhoto) {
+                data.templateImageNoPhoto = flyerSettings.templateImageNoPhoto;
             }
             try {
                 await db.collection('settings').doc('flyer').set(data, { merge: true });
@@ -1596,35 +1634,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateStr = `${dobDate.getDate()}${getOrdinal(dobDate.getDate())} ${dobDate.toLocaleDateString('en-US', { month: 'long' })} ${new Date().getFullYear()}`;
 
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
-        const templateSrc = settings.templateImage || FLYER_TEMPLATE;
+        const hasPhoto = !!m.photo;
+        const templateSrc = hasPhoto
+            ? (settings.templateImage || FLYER_TEMPLATE)
+            : (settings.templateImageNoPhoto || FLYER_TEMPLATE);
 
         const bgImg = new Image();
         bgImg.onload = async () => {
             ctx.drawImage(bgImg, 0, 0, 1280, 1280);
-            
-            if (settings.photoEnabled) {
-                if (m.photo) {
-                    await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
-                } else {
-                    await drawPhotoOnFlyer(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
-                }
+
+            if (settings.photoEnabled && hasPhoto) {
+                await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
             }
-            
+
             drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings.nameX, settings.nameY, settings.nameSize, settings.nameColor);
             drawCustomText(ctx, dateStr, settings.dateX, settings.dateY, settings.dateSize, settings.dateColor);
         };
         bgImg.onerror = async () => {
             ctx.fillStyle = '#0F172A';
             ctx.fillRect(0, 0, 1280, 1280);
-            
-            if (settings.photoEnabled) {
-                if (m.photo) {
-                    await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
-                } else {
-                    await drawPhotoOnFlyer(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
-                }
+
+            if (settings.photoEnabled && hasPhoto) {
+                await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
             }
-            
+
             drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings.nameX, settings.nameY, settings.nameSize, settings.nameColor);
             drawCustomText(ctx, dateStr, settings.dateX, settings.dateY, settings.dateSize, settings.dateColor);
         };
