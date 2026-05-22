@@ -7,6 +7,14 @@
         { "fieldPath": "memberId", "order": "ASCENDING" },
         { "fieldPath": "eventDate", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "firstName", "order": "ASCENDING" },
+        { "fieldPath": "lastName", "order": "ASCENDING" }
+      ]
     }
   ]
 }

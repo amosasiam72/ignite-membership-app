@@ -645,16 +645,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function checkDuplicateMember(email, phone, excludeId = null) {
-        if (!email && !phone) return null;
+    async function checkDuplicateMember(firstName, lastName, email, phone, excludeId = null) {
         const constraints = [];
         if (email) constraints.push(db.collection('members').where('email', '==', email));
-        if (phone) constraints.push(db.collection('members').where('phone', '==', phone));
+        if (firstName && lastName) {
+            constraints.push(db.collection('members').where('firstName', '==', firstName).where('lastName', '==', lastName));
+        }
+        if (constraints.length === 0) return null;
         const results = await Promise.all(constraints.map(q => q.get()));
         for (const snap of results) {
             if (!snap.empty) {
                 const doc = snap.docs[0];
-                if (!excludeId || doc.id !== excludeId) return doc.data().email === email ? 'email' : 'phone';
+                if (excludeId && doc.id === excludeId) continue;
+                return 'A member with this name or email is already registered.';
             }
         }
         return null;
@@ -686,11 +689,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const dup = await checkDuplicateMember(data.email, data.phone);
+        const dup = await checkDuplicateMember(data.firstName, data.lastName, data.email, data.phone);
         if (dup) {
-            errorEl.textContent = dup === 'email'
-                ? 'A member with this email is already registered.'
-                : 'A member with this phone number is already registered.';
+            errorEl.textContent = dup;
             return;
         }
 
@@ -1290,11 +1291,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     await db.collection('members').doc(id).update(data);
                     showToast('Member updated!');
                 } else {
-                    const dup = await checkDuplicateMember(data.email, data.phone);
+                    const dup = await checkDuplicateMember(data.firstName, data.lastName, data.email, data.phone);
                     if (dup) {
-                        showToast(dup === 'email'
-                            ? 'A member with this email already exists.'
-                            : 'A member with this phone number already exists.', 'error');
+                        showToast(dup, 'error');
                         return;
                     }
                     await db.collection('members').add(data);
