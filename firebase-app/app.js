@@ -645,6 +645,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    async function checkDuplicateMember(email, phone, excludeId = null) {
+        if (!email && !phone) return null;
+        const constraints = [];
+        if (email) constraints.push(db.collection('members').where('email', '==', email));
+        if (phone) constraints.push(db.collection('members').where('phone', '==', phone));
+        const results = await Promise.all(constraints.map(q => q.get()));
+        for (const snap of results) {
+            if (!snap.empty) {
+                const doc = snap.docs[0];
+                if (!excludeId || doc.id !== excludeId) return doc.data().email === email ? 'email' : 'phone';
+            }
+        }
+        return null;
+    }
+
     document.getElementById('register-form').addEventListener('submit', async e => {
         e.preventDefault();
         const errorEl = document.getElementById('register-error');
@@ -668,6 +683,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!data.firstName || !data.lastName || !data.dob || !data.phone) {
             errorEl.textContent = 'Please fill in all required fields.';
+            return;
+        }
+
+        const dup = await checkDuplicateMember(data.email, data.phone);
+        if (dup) {
+            errorEl.textContent = dup === 'email'
+                ? 'A member with this email is already registered.'
+                : 'A member with this phone number is already registered.';
             return;
         }
 
@@ -1267,6 +1290,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     await db.collection('members').doc(id).update(data);
                     showToast('Member updated!');
                 } else {
+                    const dup = await checkDuplicateMember(data.email, data.phone);
+                    if (dup) {
+                        showToast(dup === 'email'
+                            ? 'A member with this email already exists.'
+                            : 'A member with this phone number already exists.', 'error');
+                        return;
+                    }
                     await db.collection('members').add(data);
                     showToast('Member added!');
                 }
