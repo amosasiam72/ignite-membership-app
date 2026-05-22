@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.drawImage(previewTemplateImage, 0, 0, 1280, 1280);
             
             if (photoEnabled) {
-                await drawCirclePhotoPlaceholder(ctx, photoX, photoY, photoSize, photoBorderSize, photoBorderColor);
+                await drawPhotoPlaceholder(ctx, photoX, photoY, photoBorderSize, photoBorderColor);
             }
             
             if (nameEnabled) {
@@ -85,10 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sel = selectedElement;
                 let sx, sy, sw, sh;
                 if (sel === 'photo') {
-                    sx = photoX - photoSize / 2;
-                    sy = photoY - photoSize * 0.6;
-                    sw = photoSize;
-                    sh = photoSize * 1.2;
+                    sx = photoX - PHOTO_W / 2;
+                    sy = photoY - PHOTO_H / 2;
+                    sw = PHOTO_W;
+                    sh = PHOTO_H;
                 } else if (sel === 'name') {
                     const metrics = ctx.measureText("John Doe");
                     sx = nameX - metrics.width / 2 - 10;
@@ -123,40 +123,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function drawCirclePhotoPlaceholder(ctx, x, y, size, borderSize, borderColor) {
+    async function drawPhotoPlaceholder(ctx, x, y, borderSize, borderColor) {
         ctx.save();
-        const r = size / 2;
+        const left = x - PHOTO_W / 2;
+        const top = y - PHOTO_H / 2;
 
         if (borderSize > 0) {
-            ctx.beginPath();
-            ctx.arc(x, y, r + borderSize, 0, Math.PI * 2);
             ctx.fillStyle = borderColor;
-            ctx.fill();
+            ctx.fillRect(left - borderSize, top - borderSize, PHOTO_W + borderSize * 2, PHOTO_H + borderSize * 2);
         }
         
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fillStyle = '#1e293b';
-        ctx.fill();
+        ctx.fillRect(left, top, PHOTO_W, PHOTO_H);
         
         const logo = new Image();
         return new Promise((resolve) => {
             logo.onload = () => {
                 ctx.save();
                 ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.rect(left, top, PHOTO_W, PHOTO_H);
                 ctx.clip();
-                const logoSize = size * 0.6;
+                const logoSize = Math.min(PHOTO_W, PHOTO_H) * 0.5;
                 ctx.drawImage(logo, x - logoSize/2, y - logoSize/2, logoSize, logoSize);
                 ctx.restore();
                 resolve();
             };
             logo.onerror = () => {
                 ctx.fillStyle = '#64748b';
-                ctx.font = `bold ${size * 0.12}px Arial, sans-serif`;
+                ctx.font = 'bold 28px Arial, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('PHOTO HERE', x, y);
+                ctx.fillText('PHOTO', x, y - 10);
+                ctx.fillText('376×567', x, y + 20);
                 resolve();
             };
             logo.src = 'Ignite chapel no bg.png';
@@ -175,39 +173,42 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
-    function drawCircularImage(ctx, src, x, y, size, borderSize = 0, borderColor = '#ffffff') {
+    const PHOTO_W = 376, PHOTO_H = 567;
+
+    function drawPhotoOnFlyer(ctx, src, x, y, borderSize = 0, borderColor = '#ffffff') {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
                 ctx.save();
-                const r = size / 2;
+                const left = x - PHOTO_W / 2;
+                const top = y - PHOTO_H / 2;
 
                 if (borderSize > 0) {
                     ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(x, y, r + borderSize, 0, Math.PI * 2);
                     ctx.fillStyle = borderColor;
-                    ctx.fill();
+                    ctx.fillRect(left - borderSize, top - borderSize, PHOTO_W + borderSize * 2, PHOTO_H + borderSize * 2);
                     ctx.restore();
                 }
                 
                 ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.rect(left, top, PHOTO_W, PHOTO_H);
                 ctx.clip();
                 
                 const aspect = img.width / img.height;
-                let drawSize;
-                if (aspect > 1) {
-                    drawSize = size;
+                const targetRatio = PHOTO_W / PHOTO_H;
+                let sw, sh, sx, sy;
+                if (aspect > targetRatio) {
+                    sh = img.height;
+                    sw = sh * targetRatio;
+                    sx = (img.width - sw) / 2;
+                    sy = 0;
                 } else {
-                    drawSize = size;
+                    sw = img.width;
+                    sh = sw / targetRatio;
+                    sx = 0;
+                    sy = (img.height - sh) / 2;
                 }
-                const drawW = aspect > 1 ? size : size * aspect;
-                const drawH = aspect > 1 ? size / aspect : size;
-                const sx = x - drawW / 2;
-                const sy = y - drawH / 2;
-                
-                ctx.drawImage(img, sx, sy, drawW, drawH);
+                ctx.drawImage(img, sx, sy, sw, sh, left, top, PHOTO_W, PHOTO_H);
                 ctx.restore();
                 resolve();
             };
@@ -286,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elements = [];
         if (document.getElementById('settings-photo-enabled').checked) {
             const s = settings.photoSize || 300;
-            elements.push({ name: 'photo', x: settings.photoX, y: settings.photoY, hitR: s * 0.6 });
+            elements.push({ name: 'photo', x: settings.photoX, y: settings.photoY, hitR: Math.max(PHOTO_W, PHOTO_H) * 0.5 });
         }
         if (document.getElementById('settings-name-enabled').checked) {
             elements.push({ name: 'name', x: settings.nameX, y: settings.nameY, hitR: settings.nameSize * 1.2 });
@@ -1603,9 +1604,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (settings.photoEnabled) {
                 if (m.photo) {
-                    await drawCircularImage(ctx, m.photo, settings.photoX, settings.photoY, settings.photoSize, settings.photoBorderSize, settings.photoBorderColor);
+                    await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
                 } else {
-                    await drawCircularImage(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoSize, settings.photoBorderSize, settings.photoBorderColor);
+                    await drawPhotoOnFlyer(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
                 }
             }
             
@@ -1618,9 +1619,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (settings.photoEnabled) {
                 if (m.photo) {
-                    await drawCircularImage(ctx, m.photo, settings.photoX, settings.photoY, settings.photoSize, settings.photoBorderSize, settings.photoBorderColor);
+                    await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
                 } else {
-                    await drawCircularImage(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoSize, settings.photoBorderSize, settings.photoBorderColor);
+                    await drawPhotoOnFlyer(ctx, 'Ignite chapel no bg.png', settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
                 }
             }
             
