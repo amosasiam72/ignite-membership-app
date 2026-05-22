@@ -1593,7 +1593,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = canvas.getContext('2d');
 
         const dobDate = new Date(m.dob);
-        const dateStr = `${dobDate.getDate()}${getOrdinal(dobDate.getDate())} ${dobDate.toLocaleDateString('en-US', { month: 'long' })}`;
+        const dateStr = `${dobDate.getDate()}${getOrdinal(dobDate.getDate())} ${dobDate.toLocaleDateString('en-US', { month: 'long' })} ${new Date().getFullYear()}`;
 
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
         const templateSrc = settings.templateImage || FLYER_TEMPLATE;
