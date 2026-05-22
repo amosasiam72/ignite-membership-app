@@ -49,21 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchEditorMode(mode) {
         const was = editorMode;
         if (mode === was) return;
-        // Save current form values into the old mode's settings
         saveFormToSettings(was);
         editorMode = mode;
-        // Load the new mode's settings into form
         loadSettingsToForm(mode);
-        // Update tab UI
         document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
-        // Show/hide photo layer
-        document.querySelector('.editor-layer[data-element="photo"]')?.classList.toggle('hidden', mode === 'nophoto');
-        // Update template preview
         loadPreviewTemplateForMode(mode);
         drawSettingsPreview();
-        if (selectedElement && (mode === 'nophoto' && selectedElement === 'photo')) {
-            showControls(null);
-        }
     }
 
     function saveFormToSettings(mode) {
@@ -341,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showControls(element) {
         ['photo', 'name', 'date'].forEach(el => {
-            const show = el === element && !(el === 'photo' && editorMode === 'nophoto');
+            const show = el === element;
             document.getElementById(`controls-${el}`).classList.toggle('hidden', !show);
             document.querySelector(`[data-element="${el}"]`)?.classList.toggle('active', show);
         });
@@ -364,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
         const elements = [];
         const suffix = editorMode === 'nophoto' ? 'NoPhoto' : '';
-        if (editorMode === 'photo' && document.getElementById('settings-photo-enabled').checked) {
+        if (document.getElementById('settings-photo-enabled').checked) {
             const s = settings.photoSize || 300;
             elements.push({ name: 'photo', x: settings.photoX, y: settings.photoY, hitR: Math.max(PHOTO_W, PHOTO_H) * 0.5 });
         }
@@ -1061,7 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadSettingsToForm('photo');
                 loadPreviewTemplateForMode('photo');
                 document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'photo'));
-                document.querySelector('.editor-layer[data-element="photo"]')?.classList.remove('hidden');
                 drawSettingsPreview();
                 break;
         }
