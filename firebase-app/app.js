@@ -2333,7 +2333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('🎉 Happy Birthday to our members this week! Let\'s celebrate together 🎉', W / 2, H - 66);
         ctx.fillStyle = '#6B7280';
         ctx.font = '500 17px Arial, sans-serif';
-        ctx.fillText('Ignite Chapel Membership', W / 2, H - 38);
+        ctx.fillText('Ignite Chapel', W / 2, H - 38);
     }
 
     function downloadBirthdayCalendar() {
