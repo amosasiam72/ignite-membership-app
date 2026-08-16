@@ -1375,6 +1375,105 @@ a:hover { color: var(--accent); }
     display: block;
 }
 
+/* ===== User Management ===== */
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+.user-table th,
+.user-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.user-table th {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+.user-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+.user-table .perm-cell {
+    max-width: 280px;
+    line-height: 1.8;
+}
+.user-table .actions-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: 0.4rem;
+}
+.role-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.role-badge.superadmin {
+    background: rgba(255, 107, 53, 0.15);
+    color: var(--primary);
+}
+.role-badge.admin {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+}
+.perm-badge {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    margin: 0.1rem 0.15rem;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--text);
+}
+.permission-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+.perm-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 0.9rem;
+}
+.perm-toggle:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--primary);
+}
+.perm-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+}
+.btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+.btn-danger:hover {
+    background: #b91c1c;
+}
+.user-form .form-error {
+    color: #f87171;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+}
+.user-table-wrapper {
+    overflow-x: auto;
+}
+
 /* ===== Mobile Redesign (<768px) ===== */
 .mobile-tabbar { display: none; }
 
@@ -1518,4 +1617,8 @@ a:hover { color: var(--accent); }
     /* Calendar */
     .calendar-week-label { min-width: 150px; font-size: 0.9rem; }
     .calendar-controls { gap: 0.5rem; }
+
+    /* User management */
+    .user-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .user-table { min-width: 580px; }
 }

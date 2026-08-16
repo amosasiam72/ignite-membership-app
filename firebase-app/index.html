@@ -238,7 +238,7 @@
                     <li><a href="#" data-page="members">Members</a></li>
                     <li><a href="#" data-page="birthdays">Birthdays</a></li>
                     <li><a href="#" data-page="events">Events</a></li>
-                    <li><a href="#" data-page="settings">Flyer Settings</a></li>
+                    <li><a href="#" data-page="settings">Settings</a></li>
                 </ul>
                 <button id="logout-btn" class="btn btn-sm">Logout</button>
             </div>
@@ -521,6 +521,16 @@
                 <input type="hidden" id="settings-date-y" value="840">
                 <input type="hidden" id="settings-wish-x" value="640">
                 <input type="hidden" id="settings-wish-y" value="900">
+
+                <div id="user-management-section" style="display:none; margin-top:2rem;">
+                    <hr style="border-color:var(--border); margin:1.5rem 0;">
+                    <div class="page-header" style="margin-bottom:1rem;">
+                        <h1>👤 User Management</h1>
+                        <button class="btn btn-primary" onclick="openCreateUserModal()">+ Add Admin</button>
+                    </div>
+                    <p class="form-hint" style="margin-bottom:1rem;">Manage who has access to this admin panel and what they can see.</p>
+                    <div id="user-management-list" class="user-table-wrapper"></div>
+                </div>
             </div>
         </main>
 

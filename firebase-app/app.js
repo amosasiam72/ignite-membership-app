@@ -1,7 +1,48 @@
 document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
+    let currentUserProfile = null;
     let flyerSettings = null;
     let calendarWeekOffset = 0;
+
+    const ALL_PERMISSIONS = ['dashboard', 'members', 'birthdays', 'events', 'flyer-settings', 'user-management'];
+    const PERMISSION_LABELS = {
+        'dashboard': '📊 Dashboard',
+        'members': '👥 Members',
+        'birthdays': '🎂 Birthdays',
+        'events': '📅 Events',
+        'flyer-settings': '🎨 Flyer Settings',
+        'user-management': '👤 User Management'
+    };
+
+    function canAccess(feature) {
+        if (!currentUserProfile) return false;
+        if (currentUserProfile.role === 'superadmin') return true;
+        return (currentUserProfile.permissions || []).includes(feature);
+    }
+
+    function isSuperAdmin() {
+        return currentUserProfile && currentUserProfile.role === 'superadmin';
+    }
+
+    function updateNavVisibility() {
+        const pageToFeature = {
+            'dashboard': 'dashboard',
+            'members': 'members',
+            'birthdays': 'birthdays',
+            'events': 'events',
+            'settings': 'flyer-settings'
+        };
+        document.querySelectorAll('.nav-links a[data-page]').forEach(a => {
+            const feature = pageToFeature[a.dataset.page];
+            if (feature) a.style.display = canAccess(feature) ? '' : 'none';
+        });
+        document.querySelectorAll('.mobile-tab[data-page]').forEach(t => {
+            const feature = pageToFeature[t.dataset.page];
+            if (feature) t.style.display = canAccess(feature) ? '' : 'none';
+        });
+        const userMgmtSection = document.getElementById('user-management-section');
+        if (userMgmtSection) userMgmtSection.style.display = isSuperAdmin() ? '' : 'none';
+    }
 
     const DEFAULT_FLYER_SETTINGS = {
         photoEnabled: true,
@@ -789,17 +830,46 @@ document.addEventListener('DOMContentLoaded', () => {
     async function ensureUserProfile(user) {
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (!userDoc.exists) {
-            await db.collection('users').doc(user.uid).set({
+            const existingUsers = await db.collection('users').limit(5).get();
+            let hasSuperAdmin = false;
+            let hasAnyUser = false;
+            existingUsers.forEach(doc => {
+                hasAnyUser = true;
+                if (doc.data().role === 'superadmin') hasSuperAdmin = true;
+            });
+            const isFirstUser = !hasAnyUser;
+            const profile = {
                 email: user.email,
-                role: 'admin',
+                role: isFirstUser ? 'superadmin' : 'admin',
+                permissions: isFirstUser ? ALL_PERMISSIONS : [],
                 displayName: user.email.split('@')[0],
+                createdBy: null,
                 createdAt: new Date().toISOString(),
                 lastLogin: new Date().toISOString()
-            });
+            };
+            await db.collection('users').doc(user.uid).set(profile);
+            currentUserProfile = profile;
         } else {
-            await db.collection('users').doc(user.uid).update({
-                lastLogin: new Date().toISOString()
-            });
+            const data = userDoc.data();
+            currentUserProfile = data;
+            if (!data.role) {
+                const existingUsers = await db.collection('users').limit(5).get();
+                let hasSuperAdmin = false;
+                existingUsers.forEach(doc => {
+                    if (doc.data().role === 'superadmin') hasSuperAdmin = true;
+                });
+                const promoteToSuper = !hasSuperAdmin && existingUsers.size <= 1;
+                await db.collection('users').doc(user.uid).update({
+                    role: promoteToSuper ? 'superadmin' : 'admin',
+                    permissions: promoteToSuper ? ALL_PERMISSIONS : (data.permissions || [])
+                });
+                currentUserProfile = { ...data, role: promoteToSuper ? 'superadmin' : 'admin', permissions: promoteToSuper ? ALL_PERMISSIONS : (data.permissions || []) };
+            }
+            if (!data.permissions && currentUserProfile.role !== 'superadmin') {
+                await db.collection('users').doc(user.uid).update({ permissions: [] });
+                currentUserProfile = { ...currentUserProfile, permissions: [] };
+            }
+            await db.collection('users').doc(user.uid).update({ lastLogin: new Date().toISOString() });
         }
     }
 
@@ -817,6 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('register-screen').classList.add('hidden');
             document.getElementById('update-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
+            updateNavVisibility();
             try {
                 await loadFlyerSettings();
                 await loadDashboard();
@@ -825,6 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             currentUser = null;
+            currentUserProfile = null;
             document.getElementById('loading-screen').classList.add('hidden');
             document.getElementById('public-screen').classList.remove('hidden');
             document.getElementById('app').classList.add('hidden');
@@ -1197,6 +1269,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.navigate = navigateTo;
 
     async function navigateTo(page, data = {}) {
+        const pageToFeature = {
+            'dashboard': 'dashboard',
+            'members': 'members',
+            'birthdays': 'birthdays',
+            'events': 'events',
+            'settings': 'flyer-settings',
+            'member-detail': 'members',
+            'event-detail': 'events'
+        };
+        const requiredFeature = pageToFeature[page];
+        if (requiredFeature && !canAccess(requiredFeature)) {
+            showToast('You do not have access to this page.', 'error');
+            return;
+        }
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
 
@@ -1238,6 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadPreviewTemplateForMode('photo');
                 document.querySelectorAll('.editor-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'photo'));
                 drawSettingsPreview();
+                if (isSuperAdmin()) loadUserManagement();
                 break;
         }
     }
@@ -2347,4 +2435,176 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
         showToast('Calendar downloaded!');
     }
+
+    // ─── User Management ──────────────────────────────────────────────
+    async function loadUserManagement() {
+        if (!isSuperAdmin()) return;
+        const container = document.getElementById('user-management-list');
+        if (!container) return;
+        try {
+            const snap = await db.collection('users').get();
+            if (snap.empty) { container.innerHTML = '<p class="empty-state">No users found.</p>'; return; }
+            let html = '<table class="user-table"><thead><tr><th>Email</th><th>Role</th><th>Permissions</th><th>Actions</th></tr></thead><tbody>';
+            snap.forEach(doc => {
+                const u = doc.data();
+                const uid = doc.id;
+                const isMe = currentUser && uid === currentUser.uid;
+                const isTargetSuperAdmin = u.role === 'superadmin';
+                const roleBadge = isTargetSuperAdmin ? '<span class="role-badge superadmin">Super Admin</span>' : '<span class="role-badge admin">Admin</span>';
+                const perms = (u.permissions || []).map(p => `<span class="perm-badge">${PERMISSION_LABELS[p] || p}</span>`).join(' ');
+                html += `<tr>
+                    <td>${u.email || '—'}${isMe ? ' <small>(you)</small>' : ''}</td>
+                    <td>${roleBadge}</td>
+                    <td class="perm-cell">${perms || '—'}</td>
+                    <td class="actions-cell">
+                        ${!isTargetSuperAdmin ? `<button class="btn btn-sm" onclick="openEditUserPermissions('${uid}', '${u.email}')">Edit</button>` : ''}
+                        ${!isTargetSuperAdmin && !isMe ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}', '${u.email}')">Remove</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        } catch (err) {
+            container.innerHTML = '<p class="empty-state">Error loading users.</p>';
+            console.error('loadUserManagement error:', err);
+        }
+    }
+    window.loadUserManagement = loadUserManagement;
+
+    function openCreateUserModal() {
+        const modal = document.getElementById('modal-overlay');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+        title.textContent = 'Create New Admin';
+        body.innerHTML = `
+            <form id="create-user-form" class="user-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="new-user-email" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="new-user-password" placeholder="Minimum 6 characters" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="new-user-display-name" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label>Permissions</label>
+                    <div class="permission-toggles">
+                        ${ALL_PERMISSIONS.filter(p => p !== 'user-management').map(p => `
+                            <label class="perm-toggle">
+                                <input type="checkbox" value="${p}"> ${PERMISSION_LABELS[p]}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+                <div id="create-user-error" class="form-error"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Create Admin</button>
+                    <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        `;
+        modal.classList.remove('hidden');
+        document.getElementById('create-user-form').addEventListener('submit', createUser);
+    }
+    window.openCreateUserModal = openCreateUserModal;
+
+    async function createUser(e) {
+        e.preventDefault();
+        const email = document.getElementById('new-user-email').value.trim();
+        const password = document.getElementById('new-user-password').value;
+        const displayName = document.getElementById('new-user-display-name').value.trim();
+        const errorEl = document.getElementById('create-user-error');
+        const perms = Array.from(document.querySelectorAll('#create-user-form .permission-toggles input:checked')).map(cb => cb.value);
+        errorEl.textContent = '';
+        if (!email || !password) { errorEl.textContent = 'Email and password are required.'; return; }
+        errorEl.textContent = 'Creating user...';
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ email, password, returnSecureToken: true })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || 'Failed to create user');
+            await db.collection('users').doc(data.localId).set({
+                email,
+                role: 'admin',
+                permissions: perms,
+                displayName: displayName || email.split('@')[0],
+                createdBy: currentUser.uid,
+                createdAt: new Date().toISOString(),
+                lastLogin: null
+            });
+            await loadUserManagement();
+            showToast(`Admin "${email}" created successfully!`);
+            closeModal();
+        } catch (err) {
+            errorEl.textContent = err.message;
+            console.error('createUser error:', err);
+        }
+    }
+    window.createUser = createUser;
+
+    function openEditUserPermissions(uid, email) {
+        const modal = document.getElementById('modal-overlay');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+        title.textContent = `Edit Permissions — ${email}`;
+        db.collection('users').doc(uid).get().then(doc => {
+            if (!doc.exists) { showToast('User not found.', 'error'); return; }
+            const u = doc.data();
+            const currentPerms = u.permissions || [];
+            body.innerHTML = `
+                <form id="edit-perms-form" class="user-form">
+                    <div class="form-group">
+                        <label>Permissions</label>
+                        <div class="permission-toggles">
+                            ${ALL_PERMISSIONS.filter(p => p !== 'user-management').map(p => `
+                                <label class="perm-toggle">
+                                    <input type="checkbox" value="${p}" ${currentPerms.includes(p) ? 'checked' : ''}> ${PERMISSION_LABELS[p]}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div id="edit-perms-error" class="form-error"></div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                    </div>
+                </form>
+            `;
+            modal.classList.remove('hidden');
+            document.getElementById('edit-perms-form').addEventListener('submit', async ev => {
+                ev.preventDefault();
+                const perms = Array.from(document.querySelectorAll('#edit-perms-form .permission-toggles input:checked')).map(cb => cb.value);
+                try {
+                    await db.collection('users').doc(uid).update({ permissions: perms });
+                    showToast('Permissions updated!');
+                    closeModal();
+                    await loadUserManagement();
+                } catch (err) {
+                    document.getElementById('edit-perms-error').textContent = err.message;
+                }
+            });
+        });
+    }
+    window.openEditUserPermissions = openEditUserPermissions;
+
+    async function deleteUser(uid, email) {
+        if (!confirm(`Remove admin access for "${email}"? This will sign them out on next page reload.`)) return;
+        try {
+            await db.collection('users').doc(uid).delete();
+            showToast(`"${email}" removed from admin list.`);
+            await loadUserManagement();
+        } catch (err) {
+            showToast('Error removing user: ' + err.message, 'error');
+            console.error('deleteUser error:', err);
+        }
+    }
+    window.deleteUser = deleteUser;
 });
