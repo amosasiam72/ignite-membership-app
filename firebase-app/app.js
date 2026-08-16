@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let flyerSettings = null;
+    let calendarWeekOffset = 0;
 
     const DEFAULT_FLYER_SETTINGS = {
         photoEnabled: true,
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         photoSize: 300,
         photoBorderSize: 0,
         photoBorderColor: '#ffffff',
+        photoFrameEnabled: true,
         nameX: 640,
         nameY: 750,
         nameSize: 52,
@@ -25,9 +27,37 @@ document.addEventListener('DOMContentLoaded', () => {
         dateYNoPhoto: 720,
         dateSizeNoPhoto: 30,
         dateColorNoPhoto: '#ffffff',
+        wishEnabled: true,
+        wishX: 640,
+        wishY: 900,
+        wishSize: 28,
+        wishColor: '#ffffff',
+        wishXNoPhoto: 640,
+        wishYNoPhoto: 800,
+        wishSizeNoPhoto: 28,
+        wishColorNoPhoto: '#ffffff',
         templateImage: null,
         templateImageNoPhoto: null
     };
+
+    const BIRTHDAY_WISHES = [
+        "{name}, happy birthday! May your day be filled with joy and blessings.",
+        "Happy birthday {name}! Wishing you a year of amazing adventures.",
+        "Celebrating you, {name}! Happy birthday!",
+        "Happy birthday {name}! May God bless you with another year of grace.",
+        "{name}, today we celebrate you! Happy birthday!",
+        "Wishing a wonderful birthday to {name}!",
+        "Happy birthday {name}! Shine bright and keep smiling.",
+        "{name}, it's your special day! Happy birthday!",
+        "May your birthday be as awesome as you are, {name}!",
+        "Happy birthday {name}! Stay blessed and keep winning.",
+        "{name}, another year of greatness! Happy birthday!",
+        "Warmest birthday wishes to {name}!",
+        "Happy birthday {name}! We're so glad you're part of our family.",
+        "{name}, may your day be sweet and your year be bright. Happy birthday!",
+        "Happy birthday {name}! Here's to you and another year of God's favor.",
+        "{name}, you make our church family brighter! Happy birthday!"
+    ];
 
     async function loadFlyerSettings() {
         try {
@@ -68,6 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
         flyerSettings[`dateY${suffix}`] = parseInt(document.getElementById('settings-date-y').value) || 830;
         flyerSettings[`dateSize${suffix}`] = parseInt(document.getElementById('settings-date-size').value) || 30;
         flyerSettings[`dateColor${suffix}`] = document.getElementById('settings-date-color').value || '#ffffff';
+        flyerSettings[`wishX${suffix}`] = parseInt(document.getElementById('settings-wish-x').value) || 640;
+        flyerSettings[`wishY${suffix}`] = parseInt(document.getElementById('settings-wish-y').value) || 900;
+        flyerSettings[`wishSize${suffix}`] = parseInt(document.getElementById('settings-wish-size').value) || 28;
+        flyerSettings[`wishColor${suffix}`] = document.getElementById('settings-wish-color').value || '#ffffff';
     }
 
     function loadSettingsToForm(mode) {
@@ -85,6 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-date-color').value = flyerSettings[`dateColor${suffix}`] ?? '#ffffff';
         const dsVal = document.querySelector('#date-size-val');
         if (dsVal) dsVal.textContent = document.getElementById('settings-date-size').value;
+        document.getElementById('settings-wish-x').value = flyerSettings[`wishX${suffix}`] ?? 640;
+        document.getElementById('settings-wish-y').value = flyerSettings[`wishY${suffix}`] ?? 900;
+        document.getElementById('settings-wish-size').value = flyerSettings[`wishSize${suffix}`] ?? 28;
+        document.getElementById('settings-wish-color').value = flyerSettings[`wishColor${suffix}`] ?? '#ffffff';
+        const wsVal = document.querySelector('#wish-size-val');
+        if (wsVal) wsVal.textContent = document.getElementById('settings-wish-size').value;
     }
 
     function loadPreviewTemplateForMode(mode) {
@@ -122,8 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const dateSize = parseInt(document.getElementById('settings-date-size').value) || 32;
         const dateColor = document.getElementById('settings-date-color').value || '#ffffff';
 
+        const wishX = parseInt(document.getElementById('settings-wish-x').value) || 640;
+        const wishY = parseInt(document.getElementById('settings-wish-y').value) || 900;
+        const wishSize = parseInt(document.getElementById('settings-wish-size').value) || 28;
+        const wishColor = document.getElementById('settings-wish-color').value || '#ffffff';
+
         const nameEnabled = document.getElementById('settings-name-enabled').checked;
         const dateEnabled = document.getElementById('settings-date-enabled').checked;
+        const wishEnabled = document.getElementById('settings-wish-enabled').checked;
         
         const templateSrc = editorMode === 'nophoto'
             ? (flyerSettings && flyerSettings.templateImageNoPhoto ? flyerSettings.templateImageNoPhoto : FLYER_TEMPLATE)
@@ -135,6 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (photoEnabled) {
                 await drawPhotoPlaceholder(ctx, photoX, photoY, photoBorderSize, photoBorderColor);
+                if (document.getElementById('settings-photo-frame-enabled').checked) {
+                    drawAccentFrame(ctx, photoX, photoY);
+                }
             }
             
             if (nameEnabled) {
@@ -142,6 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (dateEnabled) {
                 drawCustomText(ctx, "21st May", dateX, dateY, dateSize, dateColor);
+            }
+            if (wishEnabled) {
+                drawWrappedText(ctx, "Happy Birthday, John! May your day be filled with joy and blessings", wishX, wishY, wishSize, wishColor, 900);
             }
 
             // Draw selection highlight
@@ -166,6 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     sy = dateY - dateSize / 2 - 8;
                     sw = metrics.width + 20;
                     sh = dateSize + 16;
+                } else if (sel === 'wish') {
+                    const metrics = ctx.measureText("Happy Birthday, John!");
+                    sx = wishX - metrics.width / 2 - 10;
+                    sy = wishY - wishSize / 2 - 8;
+                    sw = metrics.width + 20;
+                    sh = wishSize + 16;
                 }
                 ctx.strokeStyle = '#FF6B35';
                 ctx.lineWidth = 3;
@@ -238,9 +296,40 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
     }
 
+    function drawWrappedText(ctx, text, x, y, size, color, maxWidth, lineGap = 1.25) {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.font = `bold ${size}px Arial, sans-serif`;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 6;
+
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+        for (const word of words) {
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width > maxWidth && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = test;
+            }
+        }
+        if (line) lines.push(line);
+
+        const lineHeight = size * lineGap;
+        const startY = y - ((lines.length - 1) * lineHeight) / 2;
+        lines.forEach((l, i) => {
+            ctx.fillText(l, x, startY + i * lineHeight);
+        });
+        ctx.restore();
+    }
+
     const PHOTO_W = 376, PHOTO_H = 567;
 
-    function drawPhotoOnFlyer(ctx, src, x, y, borderSize = 0, borderColor = '#ffffff') {
+    function drawPhotoOnFlyer(ctx, src, x, y, borderSize = 0, borderColor = '#ffffff', frameEnabled = false) {
         return new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -275,11 +364,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 ctx.drawImage(img, sx, sy, sw, sh, left, top, PHOTO_W, PHOTO_H);
                 ctx.restore();
+
+                if (frameEnabled) {
+                    drawAccentFrame(ctx, x, y);
+                }
                 resolve();
             };
             img.onerror = () => resolve();
             img.src = src;
         });
+    }
+
+    function drawAccentFrame(ctx, x, y) {
+        ctx.save();
+        const pad = 12;
+        const radius = 24;
+        const left = x - PHOTO_W / 2 - pad;
+        const top = y - PHOTO_H / 2 - pad;
+        const w = PHOTO_W + pad * 2;
+        const h = PHOTO_H + pad * 2;
+
+        drawRoundRect(ctx, left, top, w, h, radius);
+        ctx.strokeStyle = '#FF6B35';
+        ctx.lineWidth = 14;
+        ctx.stroke();
+
+        drawRoundRect(ctx, left + 7, top + 7, w - 14, h - 14, radius - 6);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.restore();
     }
 
     let selectedElement = null;
@@ -295,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-photo-border-size').value = flyerSettings.photoBorderSize;
         document.getElementById('photo-border-val').textContent = flyerSettings.photoBorderSize;
         document.getElementById('settings-photo-border-color').value = flyerSettings.photoBorderColor;
+        document.getElementById('settings-photo-frame-enabled').checked = flyerSettings.photoFrameEnabled !== false;
         document.getElementById('settings-photo-x').value = flyerSettings.photoX;
         document.getElementById('settings-photo-y').value = flyerSettings.photoY;
 
@@ -313,6 +428,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('settings-date-bold').checked = true;
         document.getElementById('settings-date-x').value = flyerSettings.dateX;
         document.getElementById('settings-date-y').value = flyerSettings.dateY;
+
+        document.getElementById('settings-wish-enabled').checked = flyerSettings.wishEnabled !== false;
+        document.getElementById('settings-wish-size').value = flyerSettings.wishSize;
+        document.getElementById('wish-size-val').textContent = flyerSettings.wishSize;
+        document.getElementById('settings-wish-color').value = flyerSettings.wishColor;
+        document.getElementById('settings-wish-bold').checked = true;
+        document.getElementById('settings-wish-x').value = flyerSettings.wishX;
+        document.getElementById('settings-wish-y').value = flyerSettings.wishY;
         
         // NoPhoto hidden inputs are loaded implicitly via loadSettingsToForm on tab switch
     }
@@ -331,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showControls(element) {
-        ['photo', 'name', 'date'].forEach(el => {
+        ['photo', 'name', 'date', 'wish'].forEach(el => {
             const show = el === element;
             document.getElementById(`controls-${el}`).classList.toggle('hidden', !show);
             document.querySelector(`[data-element="${el}"]`)?.classList.toggle('active', show);
@@ -371,6 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const ds = settings[`dateSize${suffix}`];
             elements.push({ name: 'date', x: dx, y: dy, hitR: (ds || 30) * 1.2 });
         }
+        if (document.getElementById('settings-wish-enabled').checked) {
+            const wx = settings[`wishX${suffix}`];
+            const wy = settings[`wishY${suffix}`];
+            const ws = settings[`wishSize${suffix}`];
+            elements.push({ name: 'wish', x: wx, y: wy, hitR: (ws || 28) * 1.2 });
+        }
         for (const el of elements) {
             const dist = Math.sqrt((cx - el.x) ** 2 + (cy - el.y) ** 2);
             if (dist < el.hitR) return el.name;
@@ -379,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Drag-and-drop on canvas
-    document.addEventListener('mousedown', e => {
+    function settingsPointerStart(e) {
         const canvas = document.getElementById('settings-preview-canvas');
         if (!canvas || !canvas.closest('.page.active')) return;
         const coords = getCanvasCoords(e);
@@ -397,9 +526,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 canvas.style.cursor = 'grabbing';
             }
         }
-    });
+    }
 
-    document.addEventListener('mousemove', e => {
+    function settingsPointerMove(e) {
         if (!isDragging || !selectedElement) return;
         const coords = getCanvasCoords(e);
         const hiddenX = document.getElementById(`settings-${selectedElement}-x`);
@@ -409,9 +538,9 @@ document.addEventListener('DOMContentLoaded', () => {
             hiddenY.value = Math.round(Math.max(0, Math.min(1280, coords.y - dragOffsetY)));
             drawSettingsPreview();
         }
-    });
+    }
 
-    document.addEventListener('mouseup', () => {
+    function settingsPointerEnd() {
         if (isDragging && selectedElement) {
             const hiddenX = document.getElementById(`settings-${selectedElement}-x`);
             const hiddenY = document.getElementById(`settings-${selectedElement}-y`);
@@ -424,7 +553,21 @@ document.addEventListener('DOMContentLoaded', () => {
         isDragging = false;
         const canvas = document.getElementById('settings-preview-canvas');
         if (canvas) canvas.style.cursor = 'default';
-    });
+    }
+
+    document.addEventListener('mousedown', settingsPointerStart);
+    document.addEventListener('mousemove', settingsPointerMove);
+    document.addEventListener('mouseup', settingsPointerEnd);
+
+    document.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        settingsPointerStart({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+        const t = e.changedTouches[0];
+        settingsPointerMove({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+    document.addEventListener('touchend', settingsPointerEnd);
 
     // Layer click handler
     document.querySelectorAll('.editor-layer').forEach(layer => {
@@ -459,6 +602,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 flyerSettings[`nameSize${suffix}`] = parseInt(slider.value);
             } else if (slider.id === 'settings-date-size') {
                 flyerSettings[`dateSize${suffix}`] = parseInt(slider.value);
+            } else if (slider.id === 'settings-wish-size') {
+                flyerSettings[`wishSize${suffix}`] = parseInt(slider.value);
             }
             drawSettingsPreview();
         };
@@ -475,6 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 flyerSettings[`nameColor${suffix}`] = picker.value;
             } else if (picker.id === 'settings-date-color') {
                 flyerSettings[`dateColor${suffix}`] = picker.value;
+            } else if (picker.id === 'settings-wish-color') {
+                flyerSettings[`wishColor${suffix}`] = picker.value;
             }
             drawSettingsPreview();
         });
@@ -562,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 photoY: parseInt(document.getElementById('settings-photo-y').value) || 400,
                 photoBorderSize: parseInt(document.getElementById('settings-photo-border-size').value) || 0,
                 photoBorderColor: document.getElementById('settings-photo-border-color').value || '#ffffff',
+                photoFrameEnabled: document.getElementById('settings-photo-frame-enabled').checked,
                 nameX: flyerSettings.nameX,
                 nameY: flyerSettings.nameY,
                 nameSize: flyerSettings.nameSize,
@@ -578,6 +726,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 dateYNoPhoto: flyerSettings.dateYNoPhoto,
                 dateSizeNoPhoto: flyerSettings.dateSizeNoPhoto,
                 dateColorNoPhoto: flyerSettings.dateColorNoPhoto,
+                wishEnabled: document.getElementById('settings-wish-enabled').checked,
+                wishX: flyerSettings.wishX,
+                wishY: flyerSettings.wishY,
+                wishSize: flyerSettings.wishSize,
+                wishColor: flyerSettings.wishColor,
+                wishXNoPhoto: flyerSettings.wishXNoPhoto,
+                wishYNoPhoto: flyerSettings.wishYNoPhoto,
+                wishSizeNoPhoto: flyerSettings.wishSizeNoPhoto,
+                wishColorNoPhoto: flyerSettings.wishColorNoPhoto,
                 updatedAt: new Date().toISOString()
             };
             if (flyerSettings && flyerSettings.templateImage) {
@@ -645,14 +802,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-
-    // Fallback: hide loading screen after 3s regardless of auth state
-    setTimeout(() => {
-        const loading = document.getElementById('loading-screen');
-        if (loading && !loading.classList.contains('hidden')) {
-            loading.classList.add('hidden');
-        }
-    }, 3000);
 
     auth.onAuthStateChanged(async user => {
         if (user) {
@@ -1009,11 +1158,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('.mobile-tab').forEach(tab => {
+        tab.addEventListener('click', e => {
+            e.preventDefault();
+            const page = tab.dataset.page;
+            if (page) navigateTo(page);
+        });
+    });
+
     document.getElementById('add-member-btn').addEventListener('click', () => showMemberForm());
     document.getElementById('add-event-btn').addEventListener('click', () => showEventForm());
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('modal-overlay').addEventListener('click', e => {
         if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById('calendar-download-btn').addEventListener('click', downloadBirthdayCalendar);
+    document.getElementById('calendar-prev-week').addEventListener('click', () => {
+        calendarWeekOffset--;
+        renderBirthdayCalendar();
+    });
+    document.getElementById('calendar-next-week').addEventListener('click', () => {
+        calendarWeekOffset++;
+        renderBirthdayCalendar();
+    });
+    document.getElementById('calendar-this-week').addEventListener('click', () => {
+        calendarWeekOffset = 0;
+        renderBirthdayCalendar();
     });
 
     document.getElementById('member-search').addEventListener('input', e => {
@@ -1032,6 +1203,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const navLink = document.querySelector(`.nav-links a[data-page="${page}"]`);
         if (navLink) navLink.classList.add('active');
 
+        document.querySelectorAll('.mobile-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+
         switch (page) {
             case 'dashboard':
                 document.getElementById('page-dashboard').classList.add('active');
@@ -1040,6 +1213,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'members':
                 document.getElementById('page-members').classList.add('active');
                 loadMembers();
+                break;
+            case 'birthdays':
+                document.getElementById('page-birthdays').classList.add('active');
+                renderBirthdayCalendar();
                 break;
             case 'events':
                 document.getElementById('page-events').classList.add('active');
@@ -1250,6 +1427,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         container.innerHTML = `
             <div class="member-detail">
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-sm" onclick="navigate('members')">← Back to Members</button>
+                </div>
                 <div class="member-header">
                     ${m.photo ? `<img src="${m.photo}" class="detail-photo" alt="${m.firstName}">` : `<div class="detail-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-header-info">
@@ -1715,6 +1895,26 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flyer-preview">
                 <p>Generating flyer for <strong>${m.firstName} ${m.lastName}</strong> (Turning ${getAge(m.dob)})</p>
                 <canvas id="flyer-canvas" width="1280" height="1280"></canvas>
+                <p class="form-hint" style="text-align:center;margin-top:0.75rem;">Tip: drag Name, Date, Wish, or Photo on the preview to reposition</p>
+                <div class="flyer-controls">
+                    <div class="flyer-control-row">
+                        <select id="flyer-control-element" class="form-select">
+                            <option value="name">Name</option>
+                            <option value="date">Date</option>
+                            <option value="wish">Wish</option>
+                            <option value="photo">Photo</option>
+                        </select>
+                        <button type="button" id="flyer-new-wish" class="btn btn-sm">🎲 New Wish</button>
+                        <button type="button" id="flyer-reset-btn" class="btn btn-sm">Reset</button>
+                    </div>
+                    <div class="flyer-control-row">
+                        <label>Size</label>
+                        <input type="range" id="flyer-control-size" min="12" max="120" value="30">
+                        <span class="range-value" id="flyer-size-val">30</span>
+                        <label>Color</label>
+                        <input type="color" id="flyer-control-color" value="#ffffff">
+                    </div>
+                </div>
                 <div class="flyer-actions">
                     <button class="btn btn-primary btn-lg" onclick="downloadFlyer('${m.firstName}_${m.lastName}')">Download PNG</button>
                     <button class="btn" onclick="closeModal()">Close</button>
@@ -1724,42 +1924,193 @@ document.addEventListener('DOMContentLoaded', () => {
 
         modal.classList.remove('hidden');
 
-        const canvas = document.getElementById('flyer-canvas');
-        const ctx = canvas.getContext('2d');
-
-        const dobDate = new Date(m.dob);
-        const dateStr = `${dobDate.getDate()}${getOrdinal(dobDate.getDate())} ${dobDate.toLocaleDateString('en-US', { month: 'long' })} ${new Date().getFullYear()}`;
-
         const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
         const hasPhoto = !!m.photo;
         const sfx = hasPhoto ? '' : 'NoPhoto';
+
+        const dobDate = new Date(m.dob);
+
+        flyerState = {
+            m,
+            hasPhoto,
+            sfx,
+            dateStr: `${dobDate.getDate()}${getOrdinal(dobDate.getDate())} ${dobDate.toLocaleDateString('en-US', { month: 'long' })} ${new Date().getFullYear()}`,
+            wishText: getRandomBirthdayWish(m.firstName),
+            photo: { x: settings.photoX, y: settings.photoY },
+            name: { x: settings[`nameX${sfx}`], y: settings[`nameY${sfx}`], size: settings[`nameSize${sfx}`], color: settings[`nameColor${sfx}`] },
+            date: { x: settings[`dateX${sfx}`], y: settings[`dateY${sfx}`], size: settings[`dateSize${sfx}`], color: settings[`dateColor${sfx}`] },
+            wish: { x: settings[`wishX${sfx}`], y: settings[`wishY${sfx}`], size: settings[`wishSize${sfx}`], color: settings[`wishColor${sfx}`] }
+        };
+
         const templateSrc = hasPhoto
             ? (settings.templateImage || FLYER_TEMPLATE)
             : (settings.templateImageNoPhoto || FLYER_TEMPLATE);
 
-        const bgImg = new Image();
-        bgImg.onload = async () => {
-            ctx.drawImage(bgImg, 0, 0, 1280, 1280);
+        flyerState.bgImg = new Image();
+        flyerState.bgImg.onload = () => { flyerState.bgReady = true; flyerState.bgFailed = false; drawMemberFlyer(); };
+        flyerState.bgImg.onerror = () => { flyerState.bgFailed = true; flyerState.bgReady = true; drawMemberFlyer(); };
+        flyerState.bgImg.src = templateSrc;
 
-            if (settings.photoEnabled && hasPhoto) {
-                await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
-            }
+        drawMemberFlyer();
 
-            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings[`nameX${sfx}`], settings[`nameY${sfx}`], settings[`nameSize${sfx}`], settings[`nameColor${sfx}`]);
-            drawCustomText(ctx, dateStr, settings[`dateX${sfx}`], settings[`dateY${sfx}`], settings[`dateSize${sfx}`], settings[`dateColor${sfx}`]);
-        };
-        bgImg.onerror = async () => {
+        const elSelect = document.getElementById('flyer-control-element');
+        const sizeSlider = document.getElementById('flyer-control-size');
+        const sizeVal = document.getElementById('flyer-size-val');
+        const colorInput = document.getElementById('flyer-control-color');
+
+        function applyControlValues() {
+            const s = flyerState[elSelect.value];
+            const isPhoto = elSelect.value === 'photo';
+            sizeSlider.disabled = isPhoto;
+            colorInput.disabled = isPhoto;
+            sizeSlider.value = isPhoto ? 30 : s.size;
+            sizeVal.textContent = isPhoto ? '' : s.size;
+            colorInput.value = isPhoto ? '#ffffff' : s.color;
+        }
+        applyControlValues();
+
+        elSelect.addEventListener('change', applyControlValues);
+
+        sizeSlider.addEventListener('input', () => {
+            const s = flyerState[elSelect.value];
+            if (elSelect.value === 'photo') return;
+            s.size = parseInt(sizeSlider.value) || 30;
+            sizeVal.textContent = s.size;
+            drawMemberFlyer();
+        });
+
+        colorInput.addEventListener('input', () => {
+            const s = flyerState[elSelect.value];
+            if (elSelect.value === 'photo') return;
+            s.color = colorInput.value;
+            drawMemberFlyer();
+        });
+
+        document.getElementById('flyer-new-wish').addEventListener('click', () => {
+            flyerState.wishText = getRandomBirthdayWish(m.firstName);
+            drawMemberFlyer();
+        });
+
+        document.getElementById('flyer-reset-btn').addEventListener('click', () => {
+            flyerState.photo = { x: settings.photoX, y: settings.photoY };
+            flyerState.name = { x: settings[`nameX${sfx}`], y: settings[`nameY${sfx}`], size: settings[`nameSize${sfx}`], color: settings[`nameColor${sfx}`] };
+            flyerState.date = { x: settings[`dateX${sfx}`], y: settings[`dateY${sfx}`], size: settings[`dateSize${sfx}`], color: settings[`dateColor${sfx}`] };
+            flyerState.wish = { x: settings[`wishX${sfx}`], y: settings[`wishY${sfx}`], size: settings[`wishSize${sfx}`], color: settings[`wishColor${sfx}`] };
+            applyControlValues();
+            drawMemberFlyer();
+        });
+    };
+
+    let flyerState = null;
+    let flyerDrag = null;
+
+    function drawMemberFlyer() {
+        if (!flyerState) return;
+        const canvas = document.getElementById('flyer-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
+        const m = flyerState.m;
+
+        ctx.clearRect(0, 0, 1280, 1280);
+        if (flyerState.bgReady && !flyerState.bgFailed) {
+            ctx.drawImage(flyerState.bgImg, 0, 0, 1280, 1280);
+        } else {
             ctx.fillStyle = '#0F172A';
             ctx.fillRect(0, 0, 1280, 1280);
+        }
 
-            if (settings.photoEnabled && hasPhoto) {
-                await drawPhotoOnFlyer(ctx, m.photo, settings.photoX, settings.photoY, settings.photoBorderSize, settings.photoBorderColor);
+        (async () => {
+            if (settings.photoEnabled && flyerState.hasPhoto) {
+                await drawPhotoOnFlyer(ctx, m.photo, flyerState.photo.x, flyerState.photo.y, settings.photoBorderSize, settings.photoBorderColor, settings.photoFrameEnabled);
             }
+            const n = flyerState.name;
+            const d = flyerState.date;
+            const w = flyerState.wish;
+            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, n.x, n.y, n.size, n.color);
+            drawCustomText(ctx, flyerState.dateStr, d.x, d.y, d.size, d.color);
+            if (settings.wishEnabled) {
+                drawWrappedText(ctx, flyerState.wishText, w.x, w.y, w.size, w.color, 900);
+            }
+        })();
+    }
 
-            drawCustomText(ctx, `${m.firstName} ${m.lastName}`, settings[`nameX${sfx}`], settings[`nameY${sfx}`], settings[`nameSize${sfx}`], settings[`nameColor${sfx}`]);
-            drawCustomText(ctx, dateStr, settings[`dateX${sfx}`], settings[`dateY${sfx}`], settings[`dateSize${sfx}`], settings[`dateColor${sfx}`]);
+    function getFlyerCanvasCoords(e) {
+        const canvas = document.getElementById('flyer-canvas');
+        if (!canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left) * (canvas.width / rect.width),
+            y: (e.clientY - rect.top) * (canvas.height / rect.height)
         };
-        bgImg.src = templateSrc;
+    }
+
+    function flyerHitTest(cx, cy) {
+        if (!flyerState) return null;
+        const settings = flyerSettings || DEFAULT_FLYER_SETTINGS;
+        const els = [];
+        if (settings.photoEnabled && flyerState.hasPhoto) {
+            els.push({ name: 'photo', x: flyerState.photo.x, y: flyerState.photo.y, hitR: Math.max(PHOTO_W, PHOTO_H) * 0.5 });
+        }
+        els.push({ name: 'name', x: flyerState.name.x, y: flyerState.name.y, hitR: Math.max(flyerState.name.size, 30) * 1.2 });
+        els.push({ name: 'date', x: flyerState.date.x, y: flyerState.date.y, hitR: Math.max(flyerState.date.size, 24) * 1.2 });
+        els.push({ name: 'wish', x: flyerState.wish.x, y: flyerState.wish.y, hitR: Math.max(flyerState.wish.size, 24) * 1.2 });
+        for (const el of els) {
+            const dist = Math.sqrt((cx - el.x) ** 2 + (cy - el.y) ** 2);
+            if (dist < el.hitR) return el.name;
+        }
+        return null;
+    }
+
+    function flyerPointerStart(e) {
+        if (!flyerState || flyerDrag) return;
+        const modal = document.getElementById('modal-overlay');
+        if (modal.classList.contains('hidden')) return;
+        const coords = getFlyerCanvasCoords(e);
+        if (!coords) return;
+        const hit = flyerHitTest(coords.x, coords.y);
+        if (hit) {
+            flyerDrag = { element: hit, offsetX: coords.x - flyerState[hit].x, offsetY: coords.y - flyerState[hit].y };
+            const canvas = document.getElementById('flyer-canvas');
+            if (canvas) canvas.style.cursor = 'grabbing';
+        }
+    }
+
+    function flyerPointerMove(e) {
+        if (!flyerDrag) return;
+        const coords = getFlyerCanvasCoords(e);
+        if (!coords) return;
+        const el = flyerState[flyerDrag.element];
+        el.x = Math.round(Math.max(0, Math.min(1280, coords.x - flyerDrag.offsetX)));
+        el.y = Math.round(Math.max(0, Math.min(1280, coords.y - flyerDrag.offsetY)));
+        drawMemberFlyer();
+    }
+
+    function flyerPointerEnd() {
+        if (flyerDrag) {
+            const canvas = document.getElementById('flyer-canvas');
+            if (canvas) canvas.style.cursor = 'default';
+        }
+        flyerDrag = null;
+    }
+
+    document.addEventListener('mousedown', flyerPointerStart);
+    document.addEventListener('mousemove', flyerPointerMove);
+    document.addEventListener('mouseup', flyerPointerEnd);
+
+    document.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        flyerPointerStart({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+        const t = e.changedTouches[0];
+        flyerPointerMove({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+    document.addEventListener('touchend', flyerPointerEnd);
+
+    function getRandomBirthdayWish(firstName) {
+        const wish = BIRTHDAY_WISHES[Math.floor(Math.random() * BIRTHDAY_WISHES.length)];
+        return wish.replace(/\{name\}/g, firstName || 'there');
     };
 
     function getOrdinal(n) {
@@ -1776,4 +2127,224 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
         showToast('Flyer downloaded!');
     };
+
+    function getWeekRange(offset = 0) {
+        const today = new Date();
+        const day = today.getDay();
+        const diffToMonday = (day === 0 ? -6 : 1 - day);
+        const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMonday + offset * 7);
+        const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+        return { monday, sunday };
+    }
+
+    function isLeapYear(year) {
+        return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    }
+
+    function birthdayDateInRange(dob, start, end) {
+        if (!dob) return null;
+        const b = new Date(dob);
+        for (const y of [start.getFullYear(), start.getFullYear() + 1]) {
+            let mm = b.getMonth();
+            let dd = b.getDate();
+            if (mm === 1 && dd === 29 && !isLeapYear(y)) { mm = 2; dd = 1; }
+            const d = new Date(y, mm, dd);
+            if (d >= start && d <= end) return d;
+        }
+        return null;
+    }
+
+    function formatWeekLabel(monday, sunday) {
+        const sameMonth = monday.getMonth() === sunday.getMonth() && monday.getFullYear() === sunday.getFullYear();
+        if (sameMonth) {
+            return `${monday.toLocaleDateString('en-US', { month: 'short' })} ${monday.getDate()} – ${sunday.getDate()}, ${sunday.getFullYear()}`;
+        }
+        return `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${sunday.getFullYear()}`;
+    }
+
+    function loadImage(src) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    }
+
+    function drawRoundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function fitText(ctx, text, maxWidth) {
+        if (ctx.measureText(text).width <= maxWidth) return text;
+        let t = text;
+        while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) {
+            t = t.slice(0, -1);
+        }
+        return t + '…';
+    }
+
+    async function renderBirthdayCalendar() {
+        const canvas = document.getElementById('birthday-calendar-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = 1600, H = 900;
+
+        const { monday, sunday } = getWeekRange(calendarWeekOffset);
+        const weekLabel = document.getElementById('calendar-week-label');
+        if (weekLabel) weekLabel.textContent = formatWeekLabel(monday, sunday);
+
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayIdx = (todayStart >= monday && todayStart <= sunday) ? (today.getDay() + 6) % 7 : -1;
+
+        let members = [];
+        try {
+            const snap = await db.collection('members').get();
+            members = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (err) {
+            showToast('Error loading members: ' + err.message, 'error');
+        }
+
+        const days = [[], [], [], [], [], [], []];
+        for (const m of members) {
+            const dayDate = birthdayDateInRange(m.dob, monday, sunday);
+            if (!dayDate) continue;
+            const idx = Math.round((dayDate - monday) / 86400000);
+            if (idx >= 0 && idx < 7) days[idx].push({ m, dayDate });
+        }
+        for (const arr of days) {
+            arr.sort((a, b) => `${a.m.firstName} ${a.m.lastName}`.localeCompare(`${b.m.firstName} ${b.m.lastName}`));
+        }
+
+        // Background
+        const bg = ctx.createLinearGradient(0, 0, W, H);
+        bg.addColorStop(0, '#16213E');
+        bg.addColorStop(1, '#0F0F24');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        const glow = ctx.createRadialGradient(W / 2, 260, 10, W / 2, 260, 700);
+        glow.addColorStop(0, 'rgba(255,107,53,0.18)');
+        glow.addColorStop(1, 'rgba(255,107,53,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, W, H);
+
+        // Logo
+        const logo = await loadImage('Ignite chapel no bg.png');
+        if (logo) {
+            const ls = 140;
+            ctx.drawImage(logo, W / 2 - ls / 2, 36, ls, ls);
+        }
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '800 60px Arial, sans-serif';
+        ctx.fillText('IGNITE CHAPEL', W / 2, 245);
+
+        ctx.fillStyle = '#FFD60A';
+        ctx.font = '700 28px Arial, sans-serif';
+        ctx.fillText('WEEKLY BIRTHDAY CALENDAR', W / 2, 292);
+
+        // Week range pill
+        const rangeText = formatWeekLabel(monday, sunday);
+        ctx.font = '600 24px Arial, sans-serif';
+        const rw = ctx.measureText(rangeText).width + 64;
+        drawRoundRect(ctx, W / 2 - rw / 2, 314, rw, 48, 24);
+        ctx.fillStyle = 'rgba(255,107,53,0.22)';
+        ctx.fill();
+        ctx.strokeStyle = '#FF6B35';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(rangeText, W / 2, 347);
+
+        // Grid
+        const colCount = 7;
+        const pad = 44;
+        const gap = 12;
+        const colW = (W - pad * 2 - gap * (colCount - 1)) / colCount;
+        const gridTop = 396;
+        const gridH = H - gridTop - 136;
+        const dayLabels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+        for (let i = 0; i < colCount; i++) {
+            const x = pad + i * (colW + gap);
+
+            drawRoundRect(ctx, x, gridTop, colW, gridH, 16);
+            ctx.fillStyle = 'rgba(22, 33, 62, 0.92)';
+            ctx.fill();
+            if (i === todayIdx) {
+                ctx.strokeStyle = '#FFD60A';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            const dayDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+            const hx = x + 8;
+            const hw = colW - 16;
+            const hy = gridTop + 10;
+            const hh = 72;
+
+            drawRoundRect(ctx, hx, hy, hw, hh, 12);
+            ctx.fillStyle = i === todayIdx ? '#FFD60A' : 'rgba(255, 107, 53, 0.92)';
+            ctx.fill();
+
+            ctx.fillStyle = i === todayIdx ? '#14143C' : '#FFFFFF';
+            ctx.font = '700 20px Arial, sans-serif';
+            ctx.fillText(dayLabels[i], x + colW / 2, hy + 28);
+            ctx.font = '800 28px Arial, sans-serif';
+            ctx.fillText(String(dayDate.getDate()), x + colW / 2, hy + 58);
+
+            const list = days[i];
+            let ty = hy + hh + 26;
+            if (list.length === 0) {
+                ctx.fillStyle = '#6B7280';
+                ctx.font = '600 18px Arial, sans-serif';
+                ctx.fillText('—', x + colW / 2, ty + 8);
+            } else {
+                const MAX_SHOW = 4;
+                list.slice(0, MAX_SHOW).forEach(item => {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '700 18px Arial, sans-serif';
+                    const name = fitText(ctx, `${item.m.firstName} ${item.m.lastName}`, colW - 20);
+                    ctx.fillText(name, x + colW / 2, ty + 10);
+                    ty += 26;
+                });
+                if (list.length > MAX_SHOW) {
+                    ctx.fillStyle = '#B8C1D8';
+                    ctx.font = '700 16px Arial, sans-serif';
+                    ctx.fillText(`+${list.length - MAX_SHOW} more`, x + colW / 2, ty + 8);
+                }
+            }
+        }
+
+        // Footer
+        ctx.fillStyle = '#B8C1D8';
+        ctx.font = '600 23px Arial, sans-serif';
+        ctx.fillText('🎉 Happy Birthday to our members this week! Let\'s celebrate together 🎉', W / 2, H - 66);
+        ctx.fillStyle = '#6B7280';
+        ctx.font = '500 17px Arial, sans-serif';
+        ctx.fillText('Ignite Chapel Membership', W / 2, H - 38);
+    }
+
+    function downloadBirthdayCalendar() {
+        const canvas = document.getElementById('birthday-calendar-canvas');
+        if (!canvas) return;
+        const { monday, sunday } = getWeekRange(calendarWeekOffset);
+        const toDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const link = document.createElement('a');
+        link.download = `ignite-birthday-calendar_${toDate(monday)}_to_${toDate(sunday)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('Calendar downloaded!');
+    }
 });

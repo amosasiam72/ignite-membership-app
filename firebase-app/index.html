@@ -236,11 +236,35 @@
                 <ul class="nav-links">
                     <li><a href="#" data-page="dashboard" class="active">Dashboard</a></li>
                     <li><a href="#" data-page="members">Members</a></li>
+                    <li><a href="#" data-page="birthdays">Birthdays</a></li>
                     <li><a href="#" data-page="events">Events</a></li>
                     <li><a href="#" data-page="settings">Flyer Settings</a></li>
                 </ul>
                 <button id="logout-btn" class="btn btn-sm">Logout</button>
             </div>
+        </nav>
+
+        <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Mobile navigation">
+            <a href="#" class="mobile-tab active" data-page="dashboard">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Home</span>
+            </a>
+            <a href="#" class="mobile-tab" data-page="members">
+                <span class="tab-icon">👥</span>
+                <span class="tab-label">Members</span>
+            </a>
+            <a href="#" class="mobile-tab" data-page="birthdays">
+                <span class="tab-icon">🎂</span>
+                <span class="tab-label">Birthdays</span>
+            </a>
+            <a href="#" class="mobile-tab" data-page="events">
+                <span class="tab-icon">📅</span>
+                <span class="tab-label">Events</span>
+            </a>
+            <a href="#" class="mobile-tab" data-page="settings">
+                <span class="tab-icon">⚙️</span>
+                <span class="tab-label">Settings</span>
+            </a>
         </nav>
 
         <main class="container">
@@ -317,6 +341,26 @@
                 <div id="member-detail-content"></div>
             </div>
 
+            <div id="page-birthdays" class="page">
+                <div class="page-header">
+                    <h1>🎂 Weekly Birthday Calendar</h1>
+                    <div class="editor-actions">
+                        <button id="calendar-download-btn" class="btn btn-primary">Download PNG</button>
+                    </div>
+                </div>
+
+                <div class="calendar-controls">
+                    <button id="calendar-prev-week" class="btn btn-sm">← Prev Week</button>
+                    <button id="calendar-this-week" class="btn btn-sm">This Week</button>
+                    <span id="calendar-week-label" class="calendar-week-label"></span>
+                    <button id="calendar-next-week" class="btn btn-sm">Next Week →</button>
+                </div>
+
+                <div class="calendar-preview-wrapper">
+                    <canvas id="birthday-calendar-canvas" width="1600" height="900"></canvas>
+                </div>
+            </div>
+
             <div id="page-event-detail" class="page">
                 <div id="event-detail-content"></div>
             </div>
@@ -383,6 +427,11 @@
                                     <span class="layer-name">Date</span>
                                     <label class="layer-toggle"><input type="checkbox" id="settings-date-enabled" checked> <span>Show</span></label>
                                 </div>
+                                <div class="editor-layer" data-element="wish">
+                                    <span class="layer-icon">💬</span>
+                                    <span class="layer-name">Wish</span>
+                                    <label class="layer-toggle"><input type="checkbox" id="settings-wish-enabled" checked> <span>Show</span></label>
+                                </div>
                             </div>
                         </div>
                         
@@ -405,6 +454,10 @@
                                 <div class="form-group">
                                     <label>Border Color</label>
                                     <input type="color" id="settings-photo-border-color" value="#ffffff">
+                                </div>
+                                <div class="form-group">
+                                    <label>Accent Frame</label>
+                                    <input type="checkbox" id="settings-photo-frame-enabled" checked>
                                 </div>
                             </div>
                             
@@ -439,6 +492,22 @@
                                     <input type="checkbox" id="settings-date-bold" checked>
                                 </div>
                             </div>
+
+                            <div id="controls-wish" class="controls-group hidden">
+                                <div class="form-group">
+                                    <label>Font Size</label>
+                                    <input type="range" id="settings-wish-size" min="14" max="80" value="28">
+                                    <span class="range-value" id="wish-size-val">28</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <input type="color" id="settings-wish-color" value="#ffffff">
+                                </div>
+                                <div class="form-group">
+                                    <label>Bold</label>
+                                    <input type="checkbox" id="settings-wish-bold" checked>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -450,6 +519,8 @@
                 <input type="hidden" id="settings-name-y" value="770">
                 <input type="hidden" id="settings-date-x" value="640">
                 <input type="hidden" id="settings-date-y" value="840">
+                <input type="hidden" id="settings-wish-x" value="640">
+                <input type="hidden" id="settings-wish-y" value="900">
             </div>
         </main>
 
