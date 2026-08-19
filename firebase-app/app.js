@@ -2523,27 +2523,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!email || !password) { errorEl.textContent = 'Email and password are required.'; return; }
         errorEl.textContent = 'Creating user...';
         try {
-            const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+            const res = await fetch('http://localhost:3001/createAdmin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, returnSecureToken: true })
+                body: JSON.stringify({ email, password, displayName, permissions: perms })
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || 'Failed to create user');
-            await db.collection('users').doc(data.localId).set({
-                email,
-                role: 'admin',
-                permissions: perms,
-                displayName: displayName || email.split('@')[0],
-                createdBy: currentUser.uid,
-                createdAt: new Date().toISOString(),
-                lastLogin: null
-            });
+            if (!res.ok || data.error) throw new Error(data.error || 'Failed to create user');
             await loadUserManagement();
             showToast(`Admin "${email}" created successfully!`);
             closeModal();
         } catch (err) {
-            errorEl.textContent = err.message;
+            if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                errorEl.textContent = 'Admin server not running. Start it with: node admin-server.mjs';
+            } else {
+                errorEl.textContent = err.message;
+            }
             console.error('createUser error:', err);
         }
     }
