@@ -2523,10 +2523,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!email || !password) { errorEl.textContent = 'Email and password are required.'; return; }
         errorEl.textContent = 'Creating user...';
         try {
-            const idToken = await auth.currentUser.getIdToken();
             const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, returnSecureToken: true })
             });
             const data = await res.json();
