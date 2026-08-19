@@ -1542,10 +1542,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const todayBirthdays = members.filter(m => isBirthdayToday(m.dob));
+
         const upcoming = members
-            .filter(m => m.dob && daysUntilBirthday(m.dob) > 0)
+            .filter(m => {
+                if (!m.dob) return false;
+                const days = daysUntilBirthday(m.dob);
+                return days > 0;
+            })
             .sort((a, b) => daysUntilBirthday(a.dob) - daysUntilBirthday(b.dob))
-            .slice(0, 15);
+            .slice(0, 20);
 
         const upcomingEvents = eventsSnap.docs
             .map(d => ({ id: d.id, ...d.data() }))
