@@ -78,10 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let cachedMembersForNotifs = [];
     async function renderNotificationDropdown(allMembers) {
         const list = document.getElementById('notification-list');
         if (!list) return;
-        const upcoming = (allMembers || [])
+        if (allMembers) cachedMembersForNotifs = allMembers;
+        const upcoming = cachedMembersForNotifs
             .filter(m => m.dob && daysUntilBirthday(m.dob) <= 7 && daysUntilBirthday(m.dob) > 0)
             .sort((a, b) => daysUntilBirthday(a.dob) - daysUntilBirthday(b.dob))
             .slice(0, 8);
@@ -1521,6 +1523,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return today.getMonth() === birth.getMonth() && today.getDate() === birth.getDate();
     }
 
+    function isBirthdayTomorrow(dob) {
+        if (!dob) return false;
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const birth = new Date(dob);
+        return tomorrow.getMonth() === birth.getMonth() && tomorrow.getDate() === birth.getDate();
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return '';
         const d = new Date(dateStr);
@@ -1542,10 +1552,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const todayBirthdays = members.filter(m => isBirthdayToday(m.dob));
+        const tomorrowBirthdays = members.filter(m => isBirthdayTomorrow(m.dob));
 
         const upcoming = members
             .filter(m => {
                 if (!m.dob) return false;
+                if (isBirthdayToday(m.dob) || isBirthdayTomorrow(m.dob)) return false;
                 const days = daysUntilBirthday(m.dob);
                 return days > 0;
             })
@@ -1569,12 +1581,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="birthday-card">
                     ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
                     <h3>${m.firstName} ${m.lastName}</h3>
-                    <p>Turning ${getAge(m.dob)}!</p>
+                    <p>Happy Birthday! 🎉</p>
                     <button class="btn btn-secondary btn-sm" onclick="showFlyer('${m.id}')">Generate Flyer</button>
                 </div>
             `).join('');
         } else {
             todaySection.classList.add('hidden');
+        }
+
+        const tomorrowSection = document.getElementById('birthday-tomorrow-section');
+        const tomorrowGrid = document.getElementById('birthday-tomorrow-grid');
+        if (tomorrowBirthdays.length > 0) {
+            tomorrowSection.classList.remove('hidden');
+            tomorrowGrid.innerHTML = tomorrowBirthdays.map(m => `
+                <div class="birthday-card">
+                    ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
+                    <h3>${m.firstName} ${m.lastName}</h3>
+                    <p>Happy Birthday! 🎉</p>
+                </div>
+            `).join('');
+        } else {
+            tomorrowSection.classList.add('hidden');
         }
 
         document.getElementById('upcoming-birthdays').innerHTML = upcoming.length > 0
@@ -1641,7 +1668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${m.photo ? `<img src="${m.photo}" class="member-photo" alt="${m.firstName}">` : `<div class="member-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-info">
                         <h3>${m.firstName} ${m.lastName}</h3>
-                        <p class="member-birthday">🎂 ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'} (${getAge(m.dob)} yrs)</p>
+                        <p class="member-birthday">🎂 ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</p>
                         ${m.phone ? `<p class="member-contact">${m.phone}</p>` : ''}
                     </div>
                     ${isBirthdayToday(m.dob) ? '<span class="birthday-badge">Today!</span>' : ''}
@@ -1674,7 +1701,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${m.photo ? `<img src="${m.photo}" class="detail-photo" alt="${m.firstName}">` : `<div class="detail-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-header-info">
                         <h1>${m.firstName} ${m.lastName}</h1>
-                        <span class="age-badge">${getAge(m.dob)} years old</span>
                         <p class="birthday-text">🎂 Birthday: ${formatDate(m.dob)}</p>
                         ${isBirthdayToday(m.dob) ? '<span class="birthday-badge large">Birthday Today! 🎉</span>' : ''}
                         <div class="header-actions">
@@ -2133,7 +2159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         body.innerHTML = `
             <div class="flyer-preview">
-                <p>Generating flyer for <strong>${m.firstName} ${m.lastName}</strong> (Turning ${getAge(m.dob)})</p>
+                <p>Generating flyer for <strong>${m.firstName} ${m.lastName}</strong></p>
                 <canvas id="flyer-canvas" width="1280" height="1280"></canvas>
                 <p class="form-hint" style="text-align:center;margin-top:0.75rem;">Tip: drag Name, Date, Wish, or Photo on the preview to reposition</p>
                 <div class="flyer-controls">
