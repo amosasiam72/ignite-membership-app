@@ -248,9 +248,39 @@
                     <li><a href="#" data-page="events">Events</a></li>
                     <li><a href="#" data-page="settings">Settings</a></li>
                 </ul>
-                <button id="logout-btn" class="btn btn-sm">Logout</button>
+                <div class="nav-actions">
+                    <button id="notification-bell" class="notification-bell" title="Birthday Notifications">
+                        <span class="bell-icon">🔔</span>
+                        <span id="notification-badge" class="notification-badge hidden">0</span>
+                    </button>
+                    <button id="logout-btn" class="btn btn-sm">Logout</button>
+                </div>
             </div>
         </nav>
+
+        <div id="notification-dropdown" class="notification-dropdown hidden">
+            <div class="notification-dropdown-header">
+                <h3>🎂 Birthday Reminders</h3>
+                <button id="notification-enable-btn" class="btn btn-sm btn-primary">Enable Notifications</button>
+            </div>
+            <div id="notification-list" class="notification-list">
+                <p class="empty-state">No upcoming birthdays</p>
+            </div>
+        </div>
+
+        <div id="notification-permission-banner" class="notification-permission-banner hidden">
+            <div class="permission-banner-content">
+                <span class="permission-banner-icon">🔔</span>
+                <div class="permission-banner-text">
+                    <strong>Stay updated on birthdays!</strong>
+                    <p>Get notified when members have birthdays today or tomorrow.</p>
+                </div>
+                <div class="permission-banner-actions">
+                    <button id="permission-enable-btn" class="btn btn-primary btn-sm">Enable</button>
+                    <button id="permission-dismiss-btn" class="btn btn-sm">Not Now</button>
+                </div>
+            </div>
+        </div>
 
         <nav class="mobile-tabbar" id="mobile-tabbar" aria-label="Mobile navigation">
             <a href="#" class="mobile-tab active" data-page="dashboard">

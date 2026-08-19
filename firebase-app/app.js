@@ -3,6 +3,148 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
+    // ─── Birthday Notifications ──────────────────────────────────────
+    const NOTIF_STORAGE_KEY = 'ignite-birthday-notifs';
+    const NOTIF_DISMISSED_KEY = 'ignite-notif-dismissed';
+
+    function getNotifiedToday() {
+        try { return JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY) || '{}'); } catch { return {}; }
+    }
+
+    function markNotified(memberId) {
+        const data = getNotifiedToday();
+        const today = new Date().toISOString().split('T')[0];
+        if (!data._date || data._date !== today) {
+            localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify({ _date: today }));
+        }
+        const updated = getNotifiedToday();
+        updated[memberId] = true;
+        localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
+    }
+
+    function wasNotified(memberId) {
+        const data = getNotifiedToday();
+        return data[memberId] === true;
+    }
+
+    async function checkBirthdayNotifications() {
+        if (!currentUser) return;
+        if (Notification && Notification.permission !== 'granted') {
+            const dismissed = localStorage.getItem(NOTIF_DISMISSED_KEY);
+            if (!dismissed) {
+                document.getElementById('notification-permission-banner').classList.remove('hidden');
+            }
+            return;
+        }
+        try {
+            const membersSnap = await db.collection('members').get();
+            const members = membersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const today = members.filter(m => isBirthdayToday(m.dob) && !wasNotified(m.id));
+            const tomorrow = members.filter(m => {
+                if (!m.dob) return false;
+                const d = new Date(m.dob);
+                const t = new Date();
+                const tmr = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+                return d.getMonth() === tmr.getMonth() && d.getDate() === tmr.getDate() && !wasNotified(m.id);
+            });
+
+            const allNotifs = [...today.map(m => ({ ...m, type: 'today' })), ...tomorrow.map(m => ({ ...m, type: 'tomorrow' }))];
+            updateNotificationBell(allNotifs.length);
+            renderNotificationDropdown(members);
+
+            for (const notif of allNotifs) {
+                const title = notif.type === 'today' ? `🎂 Happy Birthday, ${notif.firstName}!` : `🎂 ${notif.firstName}'s birthday is tomorrow!`;
+                const body = notif.type === 'today'
+                    ? `Today is ${notif.firstName} ${notif.lastName}'s birthday!`
+                    : `Don't forget — ${notif.firstName} ${notif.lastName}'s birthday is tomorrow.`;
+                try {
+                    new Notification(title, { body, icon: 'icon-192x192.png', badge: 'icon-192x192.png', tag: `birthday-${notif.id}`, renotify: true });
+                } catch {}
+                markNotified(notif.id);
+            }
+        } catch (err) {
+            console.error('Birthday notification check error:', err);
+        }
+    }
+
+    function updateNotificationBell(count) {
+        const badge = document.getElementById('notification-badge');
+        if (!badge) return;
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+
+    async function renderNotificationDropdown(allMembers) {
+        const list = document.getElementById('notification-list');
+        if (!list) return;
+        const upcoming = (allMembers || [])
+            .filter(m => m.dob && daysUntilBirthday(m.dob) <= 7 && daysUntilBirthday(m.dob) > 0)
+            .sort((a, b) => daysUntilBirthday(a.dob) - daysUntilBirthday(b.dob))
+            .slice(0, 8);
+        if (upcoming.length === 0) {
+            list.innerHTML = '<p class="empty-state">No birthdays this week</p>';
+            return;
+        }
+        list.innerHTML = upcoming.map(m => {
+            const days = daysUntilBirthday(m.dob);
+            return `<div class="notification-item" onclick="navigate('member-detail', {id: '${m.id}'}); document.getElementById('notification-dropdown').classList.add('hidden');">
+                <div class="notif-info">
+                    <span class="notif-name">${m.firstName} ${m.lastName}</span>
+                    <span class="notif-date">${days === 1 ? 'Tomorrow' : `In ${days} days`}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    document.getElementById('notification-bell').addEventListener('click', () => {
+        const dropdown = document.getElementById('notification-dropdown');
+        dropdown.classList.toggle('hidden');
+        if (!dropdown.classList.contains('hidden')) {
+            renderNotificationDropdown();
+        }
+    });
+
+    document.addEventListener('click', e => {
+        const dropdown = document.getElementById('notification-dropdown');
+        const bell = document.getElementById('notification-bell');
+        if (!dropdown.classList.contains('hidden') && !dropdown.contains(e.target) && !bell.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    document.getElementById('permission-enable-btn').addEventListener('click', () => {
+        requestNotificationPermission();
+    });
+    document.getElementById('notification-enable-btn').addEventListener('click', () => {
+        requestNotificationPermission();
+    });
+    document.getElementById('permission-dismiss-btn').addEventListener('click', () => {
+        localStorage.setItem(NOTIF_DISMISSED_KEY, '1');
+        document.getElementById('notification-permission-banner').classList.add('hidden');
+    });
+
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) {
+            showToast('Notifications not supported in this browser.', 'error');
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            document.getElementById('notification-permission-banner').classList.add('hidden');
+            if (permission === 'granted') {
+                showToast('Birthday notifications enabled!');
+                checkBirthdayNotifications();
+            } else {
+                showToast('Notifications blocked. Enable them in browser settings.', 'error');
+            }
+        });
+    }
+
+    // ─── End Notifications ────────────────────────────────────────────
+
     let currentUser = null;
     let currentUserProfile = null;
     let flyerSettings = null;
@@ -895,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await loadFlyerSettings();
                 await loadDashboard();
+                checkBirthdayNotifications();
             } catch (err) {
                 console.error('Dashboard load error:', err);
             }
