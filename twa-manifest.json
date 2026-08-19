@@ -2,7 +2,7 @@
   "name": "Ignite Chapel Membership",
   "shortName": "Ignite Chapel",
   "packageId": "com.ignitechapel.membership",
-  "host": "YOUR-NETLIFY-SUBDOMAIN.netlify.app",
+  "host": "ignitechapelmembership.netlify.app",
   "startUrl": "/",
   "themeColor": "#FF6B35",
   "navColor": "#1A1A2E",
