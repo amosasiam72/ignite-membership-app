@@ -1,0 +1,40 @@
+{
+  "name": "Ignite Chapel Membership",
+  "shortName": "Ignite Chapel",
+  "packageId": "com.ignitechapel.membership",
+  "host": "YOUR-NETLIFY-SUBDOMAIN.netlify.app",
+  "startUrl": "/",
+  "themeColor": "#FF6B35",
+  "navColor": "#1A1A2E",
+  "backgroundColor": "#1A1A2E",
+  "iconPath": "firebase-app/icon-512x512.png",
+  "maskableIconPath": "firebase-app/icon-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signing": {
+    "path": "android/igneite-chapel.keystore",
+    "alias": "igneite-chapel",
+    "keystorePassword": "ignite2024",
+    "keyPassword": "ignite2024"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "orientation": "any",
+  "display": "standalone",
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "features": [
+    {
+      "name": "android.supportsScreens",
+      "params": [
+        { "name": "small", "value": "true" },
+        { "name": "normal", "value": "true" },
+        { "name": "large", "value": "true" },
+        { "name": "xlarge", "value": "true" }
+      ]
+    }
+  ],
+  "enableNotifications": false,
+  "isPlayBillingEnabled": false,
+  "isReferrerEnabled": false
+}

@@ -6,15 +6,11 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isSuperAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin';
-    }
-    
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isSuperAdmin() || request.auth.uid == userId;
-      allow update: if isSuperAdmin() || request.auth.uid == userId;
-      allow delete: if isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
     
     match /members/{memberId} {
