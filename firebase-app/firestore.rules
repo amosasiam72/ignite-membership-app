@@ -25,14 +25,17 @@ service cloud.firestore {
       ]);
     }
     
-    function isSelfServiceLockoutUpdate() {
-      // Anonymous callers may only touch the failed-attempt counter and the
-      // lockout deadline. pinHash and pinSalt are deliberately NOT here: allowing
-      // a second field alongside the hash would let anyone rewrite both and log in
-      // as that member with a PIN they chose.
+    function isSelfServicePinStateUpdate() {
+      // Anonymous callers may only touch the lockout counters and the
+      // reset-request guard flags. pinHash and pinSalt are deliberately NOT here:
+      // allowing those alongside the hash would let anyone rewrite both and sign
+      // in as that member with a PIN they chose.
       return changedKeys().hasOnly([
         'pinFailedAttempts',
-        'pinLockedUntil'
+        'pinLockedUntil',
+        'pinResetPending',
+        'pinResetRequestCount',
+        'pinResetRequestedAt'
       ]);
     }
     
@@ -78,7 +81,7 @@ service cloud.firestore {
       // that member. Registration writes the PIN first, then the member record.
       allow read: if true;
       allow create: if isAuthenticated() || !exists(/databases/$(database)/documents/members/$(memberId));
-      allow update: if isAuthenticated() || isSelfServiceLockoutUpdate();
+      allow update: if isAuthenticated() || isSelfServicePinStateUpdate();
       allow delete: if isAuthenticated();
     }
     

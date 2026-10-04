@@ -1312,29 +1312,64 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
             throw new Error('That email address does not look right.');
         }
 
-        const existing = await db.collection('pinResetRequests')
-            .where('memberId', '==', memberId)
-            .where('status', '==', 'pending')
-            .get();
+        // The duplicate/cap guard lives on the member's own PIN document, which is
+        // already publicly readable. It deliberately does NOT live in
+        // pinResetRequests: that collection holds contact details and is
+        // admin-read-only, so a member could not check it from the public screen.
+        const record = await getPinRecord(memberId);
 
-        if (!existing.empty) {
+        if (record && record.pinResetPending) {
             throw new Error('You already have a request waiting for an admin. Please give them a chance to get back to you.');
         }
-
-        const all = await db.collection('pinResetRequests').where('memberId', '==', memberId).get();
-        const usedAttempts = all.docs.filter(d => d.data().status !== 'declined').length;
-        if (usedAttempts >= PIN_REQUEST_MAX_ATTEMPTS) {
+        if (record && (record.pinResetRequestCount || 0) >= PIN_REQUEST_MAX_ATTEMPTS) {
             throw new Error('You have reached the limit of reset requests. Please contact an admin directly.');
         }
 
-        await db.collection('pinResetRequests').add({
-            memberId,
-            memberName,
-            email: cleanEmail,
-            phone: cleanPhone,
-            reason: cleanReason,
-            status: 'pending',
-            createdAt: new Date().toISOString()
+        // Claim the slot before filing the request so a double tap cannot create
+        // two open requests. Members with no PIN document yet cannot write here
+        // (rules only allow anonymous creates for ids with no member record), and
+        // this guard is spam reduction rather than a security control, so a
+        // failure here is logged and the request still goes through.
+        try {
+            await pinDocRef(memberId).set({
+                pinResetPending: true,
+                pinResetRequestCount: ((record && record.pinResetRequestCount) || 0) + 1,
+                pinResetRequestedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch (err) {
+            console.warn('Could not record PIN request guard:', err.message);
+        }
+
+        try {
+            await db.collection('pinResetRequests').add({
+                memberId,
+                memberName,
+                email: cleanEmail,
+                phone: cleanPhone,
+                reason: cleanReason,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            });
+        } catch (err) {
+            await releasePinRequestGuard(memberId, true);
+            throw err;
+        }
+    }
+
+    // Called by an admin once a request is handled. Declining gives the attempt
+    // back, so three declines cannot permanently lock a member out of self-service.
+    async function releasePinRequestGuard(memberId, wasDeclined) {
+        const record = await getPinRecord(memberId);
+        if (!record || !record.pinResetPending) return;
+
+        const patch = {
+            pinResetPending: firebase.firestore.FieldValue.delete()
+        };
+        if (wasDeclined) {
+            patch.pinResetRequestCount = Math.max(0, (record.pinResetRequestCount || 1) - 1);
+        }
+        await pinDocRef(memberId).update(patch).catch(err => {
+            console.warn('Could not clear PIN request guard:', err);
         });
     }
 
@@ -1361,11 +1396,17 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
     }
 
     async function completePinRequest(requestId, patch) {
-        await db.collection('pinResetRequests').doc(requestId).update({
+        const ref = db.collection('pinResetRequests').doc(requestId);
+        const snap = await ref.get();
+        if (!snap.exists) return;
+
+        await ref.update({
             ...patch,
             resolvedAt: new Date().toISOString(),
             resolvedBy: (currentUserProfile && (currentUserProfile.displayName || currentUserProfile.email)) || 'admin'
         });
+
+        await releasePinRequestGuard(snap.data().memberId, patch.status === 'declined');
     }
 
     async function checkDuplicateMember(firstName, lastName, email, phone, excludeId = null) {
