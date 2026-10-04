@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // â”€â”€â”€ Birthday Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Birthday Notifications ──────────────────────────────────────
     const NOTIF_STORAGE_KEY = 'ignite-birthday-notifs';
     const NOTIF_DISMISSED_KEY = 'ignite-notif-dismissed';
 
@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNotificationDropdown(members);
 
             for (const notif of allNotifs) {
-                const title = notif.type === 'today' ? `ðŸŽ‚ Happy Birthday, ${notif.firstName}!` : `ðŸŽ‚ ${notif.firstName}'s birthday is tomorrow!`;
+                const title = notif.type === 'today' ? `🎂 Happy Birthday, ${notif.firstName}!` : `🎂 ${notif.firstName}'s birthday is tomorrow!`;
                 const body = notif.type === 'today'
                     ? `Today is ${notif.firstName} ${notif.lastName}'s birthday!`
-                    : `Don't forget â€” ${notif.firstName} ${notif.lastName}'s birthday is tomorrow.`;
+                    : `Don't forget — ${notif.firstName} ${notif.lastName}'s birthday is tomorrow.`;
                 try {
                     new Notification(title, { body, icon: 'icon-192x192.png', badge: 'icon-192x192.png', tag: `birthday-${notif.id}`, renotify: true });
                 } catch {}
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // â”€â”€â”€ End Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── End Notifications ────────────────────────────────────────────
 
     let currentUser = null;
     let currentUserProfile = null;
@@ -468,7 +468,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('PHOTO', x, y - 10);
-                ctx.fillText('376Ã—567', x, y + 20);
+                ctx.fillText('376×567', x, y + 20);
                 resolve();
             };
             logo.src = 'Ignite chapel no bg.png';
@@ -1650,7 +1650,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
             });
 
             document.getElementById('pin-reset-reason').value = '';
-            successEl.textContent = 'Your request is in. An admin will check it and set a new PIN for you â€” watch the email or phone number you gave.';
+            successEl.textContent = 'Your request is in. An admin will check it and set a new PIN for you — watch the email or phone number you gave.';
             successEl.classList.remove('hidden');
             if (submitBtn) {
                 submitBtn.textContent = 'Request Sent';
@@ -2128,7 +2128,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                 <div class="birthday-card">
                     ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
                     <h3>${m.firstName} ${m.lastName}</h3>
-                    <p>Happy Birthday! ðŸŽ‰</p>
+                    <p>Happy Birthday! 🎉</p>
                     <button class="btn btn-secondary btn-sm" onclick="showFlyer('${m.id}')">Generate Flyer</button>
                 </div>
             `).join('');
@@ -2144,7 +2144,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                 <div class="birthday-card">
                     ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
                     <h3>${m.firstName} ${m.lastName}</h3>
-                    <p>Happy Birthday! ðŸŽ‰</p>
+                    <p>Happy Birthday! 🎉</p>
                 </div>
             `).join('');
         } else {
@@ -2215,7 +2215,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                     ${m.photo ? `<img src="${m.photo}" class="member-photo" alt="${m.firstName}">` : `<div class="member-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-info">
                         <h3>${m.firstName} ${m.lastName}</h3>
-                        <p class="member-birthday">ðŸŽ‚ ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</p>
+                        <p class="member-birthday">🎂 ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</p>
                         ${m.phone ? `<p class="member-contact">${m.phone}</p>` : ''}
                     </div>
                     ${isBirthdayToday(m.dob) ? '<span class="birthday-badge">Today!</span>' : ''}
@@ -2242,14 +2242,14 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         container.innerHTML = `
             <div class="member-detail">
                 <div style="margin-bottom: 1rem;">
-                    <button class="btn btn-sm" onclick="navigate('members')">â† Back to Members</button>
+                    <button class="btn btn-sm" onclick="navigate('members')">← Back to Members</button>
                 </div>
                 <div class="member-header">
                     ${m.photo ? `<img src="${m.photo}" class="detail-photo" alt="${m.firstName}">` : `<div class="detail-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-header-info">
                         <h1>${m.firstName} ${m.lastName}</h1>
-                        <p class="birthday-text">ðŸŽ‚ Birthday: ${formatDate(m.dob)}</p>
-                        ${isBirthdayToday(m.dob) ? '<span class="birthday-badge large">Birthday Today! ðŸŽ‰</span>' : ''}
+                        <p class="birthday-text">🎂 Birthday: ${formatDate(m.dob)}</p>
+                        ${isBirthdayToday(m.dob) ? '<span class="birthday-badge large">Birthday Today! 🎉</span>' : ''}
                         <div class="header-actions">
                             <button class="btn btn-primary" onclick="showMemberForm('${m.id}')">Edit</button>
                             <button class="btn btn-secondary" onclick="showFlyer('${m.id}')">Generate Birthday Flyer</button>
@@ -2286,7 +2286,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                                 <tr>
                                     <td>${a.eventName}</td>
                                     <td>${formatDate(a.eventDate)}</td>
-                                    <td>${a.present ? 'âœ… Present' : 'âŒ Absent'}</td>
+                                    <td>${a.present ? '✅ Present' : '❌ Absent'}</td>
                                 </tr>
                             `).join('')}
                         </table>
@@ -2497,8 +2497,8 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                 <div class="event-details">
                     <h3>${e.name}</h3>
                     ${e.description ? `<p>${e.description.substring(0, 100)}${e.description.length > 100 ? '...' : ''}</p>` : ''}
-                    ${e.time ? `<span class="event-time">ðŸ• ${e.time}</span>` : ''}
-                    ${e.location ? `<span class="event-location">ðŸ“ ${e.location}</span>` : ''}
+                    ${e.time ? `<span class="event-time">🕐 ${e.time}</span>` : ''}
+                    ${e.location ? `<span class="event-location">📍 ${e.location}</span>` : ''}
                     ${isPast ? `<span class="event-attendance">${e.attendanceCount || 0} attended</span>` : ''}
                 </div>
                 <button class="btn btn-sm" onclick="navigate('event-detail', {id: '${e.id}'})">${isPast ? 'View' : 'Manage Attendance'}</button>
@@ -2607,8 +2607,8 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                     </div>
                     <div class="event-header-info">
                         <h1>${event.name}</h1>
-                        ${event.time ? `<p class="event-time">ðŸ• ${event.time}</p>` : ''}
-                        ${event.location ? `<p class="event-location">ðŸ“ ${event.location}</p>` : ''}
+                        ${event.time ? `<p class="event-time">🕐 ${event.time}</p>` : ''}
+                        ${event.location ? `<p class="event-location">📍 ${event.location}</p>` : ''}
                         ${event.description ? `<p class="event-desc">${event.description}</p>` : ''}
                         <div class="header-actions">
                             <button class="btn btn-danger" onclick="deleteEvent('${event.id}')">Delete Event</button>
@@ -2721,7 +2721,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
 
-        title.textContent = 'ðŸŽ‚ Birthday Flyer Generator';
+        title.textContent = '🎂 Birthday Flyer Generator';
 
         body.innerHTML = `
             <div class="flyer-preview">
@@ -2736,7 +2736,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                             <option value="wish">Wish</option>
                             <option value="photo">Photo</option>
                         </select>
-                        <button type="button" id="flyer-new-wish" class="btn btn-sm">ðŸŽ² New Wish</button>
+                        <button type="button" id="flyer-new-wish" class="btn btn-sm">🎲 New Wish</button>
                         <button type="button" id="flyer-reset-btn" class="btn btn-sm">Reset</button>
                     </div>
                     <div class="flyer-control-row">
@@ -2989,9 +2989,9 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
     function formatWeekLabel(monday, sunday) {
         const sameMonth = monday.getMonth() === sunday.getMonth() && monday.getFullYear() === sunday.getFullYear();
         if (sameMonth) {
-            return `${monday.toLocaleDateString('en-US', { month: 'short' })} ${monday.getDate()} â€“ ${sunday.getDate()}, ${sunday.getFullYear()}`;
+            return `${monday.toLocaleDateString('en-US', { month: 'short' })} ${monday.getDate()} – ${sunday.getDate()}, ${sunday.getFullYear()}`;
         }
-        return `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${sunday.getFullYear()}`;
+        return `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${sunday.getFullYear()}`;
     }
 
     function loadImage(src) {
@@ -3016,10 +3016,10 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
     function fitText(ctx, text, maxWidth) {
         if (ctx.measureText(text).width <= maxWidth) return text;
         let t = text;
-        while (t.length > 1 && ctx.measureText(t + 'â€¦').width > maxWidth) {
+        while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) {
             t = t.slice(0, -1);
         }
-        return t + 'â€¦';
+        return t + '…';
     }
 
     async function renderBirthdayCalendar() {
@@ -3141,7 +3141,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
             if (list.length === 0) {
                 ctx.fillStyle = '#6B7280';
                 ctx.font = '600 18px Arial, sans-serif';
-                ctx.fillText('â€”', x + colW / 2, ty + 8);
+                ctx.fillText('—', x + colW / 2, ty + 8);
             } else {
                 const MAX_SHOW = 4;
                 list.slice(0, MAX_SHOW).forEach(item => {
@@ -3162,7 +3162,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         // Footer
         ctx.fillStyle = '#B8C1D8';
         ctx.font = '600 23px Arial, sans-serif';
-        ctx.fillText('ðŸŽ‰ Happy Birthday to our members this week! Let\'s celebrate together ðŸŽ‰', W / 2, H - 66);
+        ctx.fillText('🎉 Happy Birthday to our members this week! Let\'s celebrate together 🎉', W / 2, H - 66);
         ctx.fillStyle = '#6B7280';
         ctx.font = '500 17px Arial, sans-serif';
         ctx.fillText('Ignite Chapel', W / 2, H - 38);
@@ -3180,7 +3180,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         showToast('Calendar downloaded!');
     }
 
-    // â”€â”€â”€ User Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── User Management ──────────────────────────────────────────────
     async function loadUserManagement() {
         if (!isSuperAdmin()) return;
         const container = document.getElementById('user-management-list');
@@ -3197,9 +3197,9 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
                 const roleBadge = isTargetSuperAdmin ? '<span class="role-badge superadmin">Super Admin</span>' : '<span class="role-badge admin">Admin</span>';
                 const perms = (u.permissions || []).map(p => `<span class="perm-badge">${PERMISSION_LABELS[p] || p}</span>`).join(' ');
                 html += `<tr>
-                    <td>${u.email || 'â€”'}${isMe ? ' <small>(you)</small>' : ''}</td>
+                    <td>${u.email || '—'}${isMe ? ' <small>(you)</small>' : ''}</td>
                     <td>${roleBadge}</td>
-                    <td class="perm-cell">${perms || 'â€”'}</td>
+                    <td class="perm-cell">${perms || '—'}</td>
                     <td class="actions-cell">
                         ${!isTargetSuperAdmin ? `<button class="btn btn-sm" onclick="openEditUserPermissions('${uid}', '${u.email}')">Edit</button>` : ''}
                         ${!isTargetSuperAdmin && !isMe ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}', '${u.email}')">Remove</button>` : ''}
@@ -3292,7 +3292,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         const modal = document.getElementById('modal-overlay');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
-        title.textContent = `Edit Permissions â€” ${email}`;
+        title.textContent = `Edit Permissions — ${email}`;
         db.collection('users').doc(uid).get().then(doc => {
             if (!doc.exists) { showToast('User not found.', 'error'); return; }
             const u = doc.data();
