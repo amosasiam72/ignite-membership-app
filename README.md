@@ -6,6 +6,8 @@ A church membership management app for Ignite Chapel's media team. Built with Fi
 
 - **Public Registration** — Members register voluntarily (no login required) with name, DOB, phone, email, 4-digit PIN, Instagram, TikTok, and profile photo
 - **Self-Service Updates** — Members update details via name search + secret 4-digit PIN verification
+- **Forgot PIN** — Members submit a request from the app; an admin verifies their identity and sets the new PIN, which is shown once for hand-off. No email service required
+- **PINs Stored Hashed** — PINs are salted SHA-256 hashes in a separate `memberPin` collection, with lockout after 5 wrong guesses
 - **Admin Dashboard** — Email/password login with stats, birthday countdowns, and full member/event CRUD
 - **Events & Attendance** — Create events, mark members present/absent
 - **Birthday Flyer Generator** — Generates custom birthday flyers using a Canva-designed template with draggable text/photo positioning
@@ -30,6 +32,9 @@ A church membership management app for Ignite Chapel's media team. Built with Fi
    ```
    firebase deploy --only hosting --project ignite-chapel-membership-app
    ```
+6. "Forgot PIN" needs no extra setup — admins handle requests from the **PIN Requests** page in the dashboard. See [SETUP.md](firebase-app/SETUP.md) for the flow and the identity-verification warning
+
+Note: PIN features use the Web Crypto API, so the app must be served over `https://` or from `localhost`. Opening `index.html` directly from the filesystem disables PIN hashing.
 
 ## Admin Login
 

@@ -176,7 +176,34 @@
                     <button type="submit" class="btn btn-primary btn-block">Verify & Edit</button>
                     <p id="verify-error" class="error-message"></p>
                 </form>
-                <p style="margin-top: 1rem; text-align: center;"><a href="#" id="back-to-search-from-verify" style="color: var(--text-secondary);">← Try a different name</a></p>
+                <p style="margin-top: 1rem; text-align: center;"><a href="#" id="forgot-pin" style="color: var(--text-secondary);">Forgot your PIN?</a></p>
+                <p style="margin-top: 0.75rem; text-align: center;"><a href="#" id="back-to-search-from-verify" style="color: var(--text-secondary);">← Try a different name</a></p>
+            </div>
+
+            <div id="pin-reset-request-step" class="hidden">
+                <p id="pin-reset-target-msg" class="success-message" style="margin-bottom: 1rem;"></p>
+                <p style="color: var(--text-secondary); text-align: center; margin-bottom: 1rem;">Leave your details and an admin will set a new PIN for you and get it to you.</p>
+                <form id="pin-reset-request-form">
+                    <input type="hidden" id="pin-reset-member-id">
+                    <div class="form-group">
+                        <label for="pin-reset-email">Email</label>
+                        <input type="email" id="pin-reset-email" placeholder="you@example.com">
+                        <p class="form-hint">Pre-filled from your membership — change it if the admin should use a different one.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="pin-reset-phone">Phone</label>
+                        <input type="tel" id="pin-reset-phone" placeholder="555-123-4567">
+                        <p class="form-hint">Give at least one way for the admin to reach you.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="pin-reset-reason">Anything the admin should know? (optional)</label>
+                        <textarea id="pin-reset-reason" rows="2" placeholder="e.g. Locked out since Sunday service."></textarea>
+                    </div>
+                    <button type="submit" id="pin-reset-request-submit" class="btn btn-primary btn-block">Send Request</button>
+                    <p id="pin-reset-request-error" class="error-message"></p>
+                    <p id="pin-reset-request-success" class="success-message hidden"></p>
+                </form>
+                <p style="margin-top: 1rem; text-align: center;"><a href="#" id="back-to-verify-from-reset" style="color: var(--text-secondary);">← Back to PIN entry</a></p>
             </div>
 
             <div id="update-edit-step" class="hidden">
@@ -244,6 +271,11 @@
                 <ul class="nav-links">
                     <li><a href="#" data-page="dashboard" class="active">Dashboard</a></li>
                     <li><a href="#" data-page="members">Members</a></li>
+                    <li>
+                        <a href="#" data-page="pin-resets" id="nav-pin-resets">PIN Requests
+                            <span id="pin-reset-badge" class="notification-badge hidden">0</span>
+                        </a>
+                    </li>
                     <li><a href="#" data-page="birthdays">Birthdays</a></li>
                     <li><a href="#" data-page="events">Events</a></li>
                     <li><a href="#" data-page="settings">Settings</a></li>
@@ -361,6 +393,25 @@
                 </div>
 
                 <div id="members-grid" class="member-grid"></div>
+            </div>
+
+            <div id="page-pin-resets" class="page">
+                <div class="page-header">
+                    <h1>🔑 PIN Reset Requests</h1>
+                </div>
+
+                <div class="section">
+                    <h2>Waiting on you</h2>
+                    <p class="form-hint" style="margin-bottom: 1rem;">
+                        Confirm who you're speaking to before setting a PIN — use the email or phone on the request to verify.
+                    </p>
+                    <div id="pin-resets-list" class="event-list"></div>
+                </div>
+
+                <div class="section" id="pin-resets-history-section">
+                    <h2>Recently handled</h2>
+                    <div id="pin-resets-history" class="event-list"></div>
+                </div>
             </div>
 
             <div id="page-events" class="page">

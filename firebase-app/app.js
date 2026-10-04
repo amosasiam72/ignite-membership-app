@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
-    // ─── Birthday Notifications ──────────────────────────────────────
+    // â”€â”€â”€ Birthday Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const NOTIF_STORAGE_KEY = 'ignite-birthday-notifs';
     const NOTIF_DISMISSED_KEY = 'ignite-notif-dismissed';
 
@@ -53,10 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNotificationDropdown(members);
 
             for (const notif of allNotifs) {
-                const title = notif.type === 'today' ? `🎂 Happy Birthday, ${notif.firstName}!` : `🎂 ${notif.firstName}'s birthday is tomorrow!`;
+                const title = notif.type === 'today' ? `ðŸŽ‚ Happy Birthday, ${notif.firstName}!` : `ðŸŽ‚ ${notif.firstName}'s birthday is tomorrow!`;
                 const body = notif.type === 'today'
                     ? `Today is ${notif.firstName} ${notif.lastName}'s birthday!`
-                    : `Don't forget — ${notif.firstName} ${notif.lastName}'s birthday is tomorrow.`;
+                    : `Don't forget â€” ${notif.firstName} ${notif.lastName}'s birthday is tomorrow.`;
                 try {
                     new Notification(title, { body, icon: 'icon-192x192.png', badge: 'icon-192x192.png', tag: `birthday-${notif.id}`, renotify: true });
                 } catch {}
@@ -145,17 +145,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── End Notifications ────────────────────────────────────────────
+    // â”€â”€â”€ End Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     let currentUser = null;
     let currentUserProfile = null;
     let flyerSettings = null;
     let calendarWeekOffset = 0;
 
-    const ALL_PERMISSIONS = ['dashboard', 'members', 'birthdays', 'events', 'flyer-settings', 'user-management'];
+const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'events', 'flyer-settings', 'user-management'];
     const PERMISSION_LABELS = {
         'dashboard': '📊 Dashboard',
         'members': '👥 Members',
+        'pin-resets': '🔑 PIN Reset Requests',
         'birthdays': '🎂 Birthdays',
         'events': '📅 Events',
         'flyer-settings': '🎨 Flyer Settings',
@@ -176,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageToFeature = {
             'dashboard': 'dashboard',
             'members': 'members',
+            'pin-resets': 'pin-resets',
             'birthdays': 'birthdays',
             'events': 'events',
             'settings': 'flyer-settings'
@@ -466,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('PHOTO', x, y - 10);
-                ctx.fillText('376×567', x, y + 20);
+                ctx.fillText('376Ã—567', x, y + 20);
                 resolve();
             };
             logo.src = 'Ignite chapel no bg.png';
@@ -1036,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('update-screen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             updateNavVisibility();
+            refreshPinRequestBadge();
             try {
                 await loadFlyerSettings();
                 await loadDashboard();
@@ -1081,14 +1084,59 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('register-error').textContent = '';
     });
 
+    const PIN_MAX_ATTEMPTS = 5;
+    const PIN_LOCKOUT_MS = 10 * 60 * 1000;
+    const PIN_REQUEST_MAX_ATTEMPTS = 3;
+
+    let pendingVerifyMember = null;
+    let pinResetInFlight = false;
+
+    const UPDATE_STEP_IDS = [
+        'update-search-step',
+        'update-verify-step',
+        'pin-reset-request-step',
+        'update-edit-step'
+    ];
+
+    function showUpdateStep(stepId) {
+        UPDATE_STEP_IDS.forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById(stepId).classList.remove('hidden');
+    }
+
+    function resetUpdateWizard() {
+        showUpdateStep('update-search-step');
+        pendingVerifyMember = null;
+        document.getElementById('update-search-form').reset();
+        document.getElementById('update-search-error').textContent = '';
+        document.getElementById('update-success').classList.add('hidden');
+    }
+
+    function enterEditStep(memberId, member) {
+        document.getElementById('update-member-id').value = memberId;
+        document.getElementById('upd-firstName').value = member.firstName || '';
+        document.getElementById('upd-lastName').value = member.lastName || '';
+        document.getElementById('upd-dob').value = member.dob || '';
+        document.getElementById('upd-phone').value = member.phone || '';
+        document.getElementById('upd-email').value = member.email || '';
+        document.getElementById('upd-instagram').value = member.instagram || '';
+        document.getElementById('upd-tiktok').value = member.tiktok || '';
+
+        const preview = document.getElementById('upd-photo-preview');
+        if (member.photo) {
+            document.getElementById('upd-photo-img').src = member.photo;
+            preview.classList.remove('hidden');
+        } else {
+            preview.classList.add('hidden');
+        }
+
+        showUpdateStep('update-edit-step');
+    }
+
     document.getElementById('go-to-update').addEventListener('click', e => {
         e.preventDefault();
         document.getElementById('public-screen').classList.add('hidden');
         document.getElementById('update-screen').classList.remove('hidden');
-        document.getElementById('update-search-step').classList.remove('hidden');
-        document.getElementById('update-edit-step').classList.add('hidden');
-        document.getElementById('update-search-form').reset();
-        document.getElementById('update-search-error').textContent = '';
+        resetUpdateWizard();
     });
 
     document.getElementById('go-to-public-from-update').addEventListener('click', e => {
@@ -1099,10 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('back-to-search').addEventListener('click', e => {
         e.preventDefault();
-        document.getElementById('update-search-step').classList.remove('hidden');
-        document.getElementById('update-verify-step').classList.add('hidden');
-        document.getElementById('update-edit-step').classList.add('hidden');
-        document.getElementById('update-search-form').reset();
+        resetUpdateWizard();
     });
 
     document.getElementById('login-form').addEventListener('submit', async e => {
@@ -1147,6 +1192,182 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function requireCrypto() {
+        if (!window.crypto || !window.crypto.subtle) {
+            throw new Error('PIN features need a secure connection. Please open this app via https:// or from a local web server (not by double-clicking index.html).');
+        }
+    }
+
+    function randomHex(bytes) {
+        requireCrypto();
+        const arr = new Uint8Array(bytes);
+        window.crypto.getRandomValues(arr);
+        return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function sha256Hex(text) {
+        requireCrypto();
+        const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function hashSecret(secret, salt) {
+        return sha256Hex(`${salt}:${secret}`);
+    }
+
+    function timingSafeEqual(a, b) {
+        if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+        let diff = 0;
+        for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+        return diff === 0;
+    }
+
+    function isValidPin(pin) {
+        return /^[0-9]{4}$/.test(pin);
+    }
+
+    function pinDocRef(memberId) {
+        return db.collection('memberPin').doc(memberId);
+    }
+
+    async function getPinRecord(memberId) {
+        try {
+            const snap = await pinDocRef(memberId).get();
+            return snap.exists ? snap.data() : null;
+        } catch (err) {
+            console.error('PIN record read failed:', err);
+            return null;
+        }
+    }
+
+    async function getMemberRecord(memberId) {
+        const snap = await db.collection('members').doc(memberId).get();
+        return snap.exists ? snap.data() : null;
+    }
+
+    async function setMemberPin(memberId, pin) {
+        const salt = randomHex(16);
+        await pinDocRef(memberId).set({
+            pinSalt: salt,
+            pinHash: await hashSecret(pin, salt),
+            pinUpdatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        }, { merge: true });
+    }
+
+    async function verifyMemberPin(memberId, member, enteredPin) {
+        const record = await getPinRecord(memberId);
+
+        if (record && record.pinHash) {
+            if (record.pinLockedUntil && Date.now() < record.pinLockedUntil) {
+                const mins = Math.max(1, Math.ceil((record.pinLockedUntil - Date.now()) / 60000));
+                return { ok: false, reason: `Too many wrong PINs. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` };
+            }
+
+            const match = timingSafeEqual(await hashSecret(enteredPin, record.pinSalt), record.pinHash);
+            if (match) {
+                await pinDocRef(memberId).update({
+                    pinFailedAttempts: 0,
+                    pinLockedUntil: firebase.firestore.FieldValue.delete()
+                }).catch(() => {});
+                return { ok: true };
+            }
+
+            const attempts = (record.pinFailedAttempts || 0) + 1;
+            const patch = { pinFailedAttempts: attempts };
+            if (attempts >= PIN_MAX_ATTEMPTS) patch.pinLockedUntil = Date.now() + PIN_LOCKOUT_MS;
+            await pinDocRef(memberId).update(patch).catch(() => {});
+            return { ok: false, reason: 'Wrong PIN. Please try again.' };
+        }
+
+        if (member && member.pin) {
+            if (member.pin === enteredPin) {
+                // Best-effort migration of the legacy plain-text PIN. Rules block
+                // anonymous PIN writes for a member that already has a record, so
+                // this can legitimately fail — verification still succeeds and the
+                // plain field is cleared by an admin-set PIN instead.
+                await setMemberPin(memberId, enteredPin).catch(err => {
+                    console.warn('Legacy PIN migration deferred:', err.message);
+                });
+                await db.collection('members').doc(memberId)
+                    .update({ pin: firebase.firestore.FieldValue.delete() })
+                    .catch(() => {});
+                return { ok: true };
+            }
+            return { ok: false, reason: 'Wrong PIN. Please try again.' };
+        }
+
+        return { ok: false, reason: 'No PIN has been set for this membership yet. Use "Forgot your PIN?" to create one.', noPin: true };
+    }
+
+    async function submitPinResetRequest({ memberId, memberName, email, phone, reason }) {
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanPhone = (phone || '').trim();
+        const cleanReason = (reason || '').trim().slice(0, 500);
+
+        if (!cleanEmail && !cleanPhone) {
+            throw new Error('Please give us an email or a phone number so an admin can reach you.');
+        }
+        if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+            throw new Error('That email address does not look right.');
+        }
+
+        const existing = await db.collection('pinResetRequests')
+            .where('memberId', '==', memberId)
+            .where('status', '==', 'pending')
+            .get();
+
+        if (!existing.empty) {
+            throw new Error('You already have a request waiting for an admin. Please give them a chance to get back to you.');
+        }
+
+        const all = await db.collection('pinResetRequests').where('memberId', '==', memberId).get();
+        const usedAttempts = all.docs.filter(d => d.data().status !== 'declined').length;
+        if (usedAttempts >= PIN_REQUEST_MAX_ATTEMPTS) {
+            throw new Error('You have reached the limit of reset requests. Please contact an admin directly.');
+        }
+
+        await db.collection('pinResetRequests').add({
+            memberId,
+            memberName,
+            email: cleanEmail,
+            phone: cleanPhone,
+            reason: cleanReason,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    async function resetMemberPinByAdmin(memberId, pin) {
+        if (!isValidPin(pin)) throw new Error('PIN must be exactly 4 digits.');
+
+        await setMemberPin(memberId, pin);
+
+        await pinDocRef(memberId).update({
+            pinFailedAttempts: 0,
+            pinLockedUntil: firebase.firestore.FieldValue.delete(),
+            pinResetCodeHash: firebase.firestore.FieldValue.delete(),
+            pinResetSalt: firebase.firestore.FieldValue.delete(),
+            pinResetExpiresAt: firebase.firestore.FieldValue.delete(),
+            pinResetAttempts: firebase.firestore.FieldValue.delete(),
+            pinResetSentAt: firebase.firestore.FieldValue.delete()
+        }).catch(() => {});
+
+        const legacyPin = await db.collection('members').doc(memberId)
+            .update({ pin: firebase.firestore.FieldValue.delete() })
+            .then(() => true)
+            .catch(() => false);
+        return { legacyPinCleared: legacyPin };
+    }
+
+    async function completePinRequest(requestId, patch) {
+        await db.collection('pinResetRequests').doc(requestId).update({
+            ...patch,
+            resolvedAt: new Date().toISOString(),
+            resolvedBy: (currentUserProfile && (currentUserProfile.displayName || currentUserProfile.email)) || 'admin'
+        });
+    }
+
     async function checkDuplicateMember(firstName, lastName, email, phone, excludeId = null) {
         if (!firstName || !lastName) return null;
         const snap = await db.collection('members')
@@ -1168,7 +1389,6 @@ document.addEventListener('DOMContentLoaded', () => {
         successEl.classList.add('hidden');
 
         const data = {
-            pin: document.getElementById('reg-pin').value.trim(),
             firstName: document.getElementById('reg-firstName').value.trim(),
             lastName: document.getElementById('reg-lastName').value.trim(),
             dob: document.getElementById('reg-dob').value,
@@ -1181,8 +1401,15 @@ document.addEventListener('DOMContentLoaded', () => {
             updatedAt: new Date().toISOString()
         };
 
+        const pin = document.getElementById('reg-pin').value.trim();
+
         if (!data.firstName || !data.lastName || !data.dob || !data.phone) {
             errorEl.textContent = 'Please fill in all required fields.';
+            return;
+        }
+
+        if (!isValidPin(pin)) {
+            errorEl.textContent = 'Your PIN must be exactly 4 digits.';
             return;
         }
 
@@ -1198,7 +1425,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            await db.collection('members').add(data);
+            // Reserve the member id first, but write the PIN before the member
+            // record. Firestore rules only allow an anonymous PIN write while the
+            // member document does not exist yet, which stops anyone from
+            // planting a known salt/hash on an existing membership.
+            const ref = db.collection('members').doc();
+            await setMemberPin(ref.id, pin);
+            await ref.set(data);
             successEl.textContent = 'Registration successful! Your details have been submitted.';
             successEl.classList.remove('hidden');
             document.getElementById('register-form').reset();
@@ -1242,18 +1475,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const member = { id: matches[0].id, ...matches[0].data() };
+        pendingVerifyMember = member;
         document.getElementById('verify-member-id').value = member.id;
         document.getElementById('update-found-msg').textContent = `We found ${member.firstName} ${member.lastName}!`;
         document.getElementById('update-search-step').classList.add('hidden');
         document.getElementById('update-verify-step').classList.remove('hidden');
         document.getElementById('verify-error').textContent = '';
-        document.getElementById('verify-phone').value = '';
+        document.getElementById('verify-pin').value = '';
     });
 
     document.getElementById('back-to-search-from-verify').addEventListener('click', e => {
         e.preventDefault();
-        document.getElementById('update-verify-step').classList.add('hidden');
-        document.getElementById('update-search-step').classList.remove('hidden');
+        pendingVerifyMember = null;
+        document.getElementById('verify-member-id').value = '';
+        document.getElementById('verify-pin').value = '';
+        showUpdateStep('update-search-step');
     });
 
     document.getElementById('update-verify-form').addEventListener('submit', async e => {
@@ -1263,14 +1499,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorEl = document.getElementById('verify-error');
         errorEl.textContent = '';
 
-        console.log('Verify: memberId=' + memberId + ', pin=' + enteredPin);
-
         if (!enteredPin) {
             errorEl.textContent = 'Please enter your PIN.';
             return;
         }
 
-        if (enteredPin.length !== 4) {
+        if (!isValidPin(enteredPin)) {
             errorEl.textContent = 'PIN must be 4 digits.';
             return;
         }
@@ -1280,48 +1514,117 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let doc;
+        errorEl.textContent = 'Checking...';
+
+        let member;
         try {
-            doc = await db.collection('members').doc(memberId).get();
+            member = pendingVerifyMember || await getMemberRecord(memberId);
         } catch (err) {
             console.error('Firestore read error:', err);
             errorEl.textContent = 'Error reading data: ' + err.message;
             return;
         }
-        const member = doc.data();
 
         if (!member) {
             errorEl.textContent = 'Member not found. Please try again.';
             return;
         }
 
-        console.log('Stored pin:', member.pin);
-
-        if (member.pin !== enteredPin) {
-            errorEl.textContent = 'Wrong PIN. Please try again.';
+        let result;
+        try {
+            result = await verifyMemberPin(memberId, member, enteredPin);
+        } catch (err) {
+            console.error('PIN check failed:', err);
+            errorEl.textContent = 'Could not verify your PIN: ' + err.message;
             return;
         }
 
-        document.getElementById('update-member-id').value = memberId;
-        document.getElementById('upd-firstName').value = member.firstName || '';
-        document.getElementById('upd-lastName').value = member.lastName || '';
-        document.getElementById('upd-dob').value = member.dob || '';
-        document.getElementById('upd-phone').value = member.phone || '';
-        document.getElementById('upd-email').value = member.email || '';
-        document.getElementById('upd-instagram').value = member.instagram || '';
-        document.getElementById('upd-tiktok').value = member.tiktok || '';
-
-        const preview = document.getElementById('upd-photo-preview');
-        if (member.photo) {
-            document.getElementById('upd-photo-img').src = member.photo;
-            preview.classList.remove('hidden');
-        } else {
-            preview.classList.add('hidden');
+        if (!result.ok) {
+            errorEl.textContent = result.reason;
+            return;
         }
 
-        document.getElementById('update-verify-step').classList.add('hidden');
-        document.getElementById('update-edit-step').classList.remove('hidden');
+        document.getElementById('update-success').classList.add('hidden');
+        enterEditStep(memberId, member);
     });
+
+    document.getElementById('forgot-pin').addEventListener('click', e => {
+        e.preventDefault();
+        const memberId = document.getElementById('verify-member-id').value;
+        const member = pendingVerifyMember;
+
+        if (!memberId || !member) {
+            document.getElementById('verify-error').textContent = 'Session expired. Please search for your name again.';
+            return;
+        }
+
+        document.getElementById('pin-reset-member-id').value = memberId;
+        document.getElementById('pin-reset-target-msg').textContent = `Requesting a PIN reset for ${member.firstName} ${member.lastName}`;
+        document.getElementById('pin-reset-request-error').textContent = '';
+        document.getElementById('pin-reset-request-success').classList.add('hidden');
+        document.getElementById('pin-reset-email').value = member.email || '';
+        document.getElementById('pin-reset-phone').value = member.phone || '';
+        document.getElementById('pin-reset-reason').value = '';
+        showUpdateStep('pin-reset-request-step');
+    });
+
+    document.getElementById('back-to-verify-from-reset').addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('pin-reset-reason').value = '';
+        showUpdateStep('update-verify-step');
+    });
+
+    document.getElementById('pin-reset-request-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const errorEl = document.getElementById('pin-reset-request-error');
+        const successEl = document.getElementById('pin-reset-request-success');
+        const submitBtn = document.getElementById('pin-reset-request-submit');
+        const memberId = document.getElementById('pin-reset-member-id').value;
+        const member = pendingVerifyMember;
+
+        errorEl.textContent = '';
+        successEl.classList.add('hidden');
+
+        if (pinResetInFlight) return;
+
+        if (!memberId || !member) {
+            errorEl.textContent = 'Session expired. Please search for your name again.';
+            return;
+        }
+
+        pinResetInFlight = true;
+        const defaultLabel = submitBtn ? submitBtn.textContent : 'Send Request';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+        }
+
+        try {
+            await submitPinResetRequest({
+                memberId,
+                memberName: `${member.firstName} ${member.lastName}`.trim(),
+                email: document.getElementById('pin-reset-email').value,
+                phone: document.getElementById('pin-reset-phone').value,
+                reason: document.getElementById('pin-reset-reason').value
+            });
+
+            document.getElementById('pin-reset-reason').value = '';
+            successEl.textContent = 'Your request is in. An admin will check it and set a new PIN for you â€” watch the email or phone number you gave.';
+            successEl.classList.remove('hidden');
+            if (submitBtn) {
+                submitBtn.textContent = 'Request Sent';
+                submitBtn.disabled = true;
+            }
+        } catch (err) {
+            console.error('PIN reset request failed:', err);
+            errorEl.textContent = err.message || 'Could not send your request. Please try again.';
+            if (submitBtn) submitBtn.textContent = defaultLabel;
+        } finally {
+            pinResetInFlight = false;
+            if (submitBtn && submitBtn.textContent !== 'Request Sent') submitBtn.disabled = false;
+        }
+    });
+
 
     document.getElementById('upd-photo').addEventListener('change', e => {
         const file = e.target.files[0];
@@ -1421,6 +1724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageToFeature = {
             'dashboard': 'dashboard',
             'members': 'members',
+            'pin-resets': 'pin-resets',
             'birthdays': 'birthdays',
             'events': 'events',
             'settings': 'flyer-settings',
@@ -1449,6 +1753,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'members':
                 document.getElementById('page-members').classList.add('active');
                 loadMembers();
+                break;
+            case 'pin-resets':
+                document.getElementById('page-pin-resets').classList.add('active');
+                loadPinRequests();
                 break;
             case 'birthdays':
                 document.getElementById('page-birthdays').classList.add('active');
@@ -1537,6 +1845,204 @@ document.addEventListener('DOMContentLoaded', () => {
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
+    function pinRequestCard(r, isPending) {
+        const contact = [r.email, r.phone].filter(Boolean).map(v =>
+            `<a href="${v.includes('@') ? `mailto:${v}` : `tel:${v}`}" style="color: var(--primary);">${escapeHtml(v)}</a>`
+        ).join(' &middot; ') || '<em>no contact details given</em>';
+
+        const actions = isPending ? `
+            <div class="editor-actions" style="margin-top: 0.75rem;">
+                <button class="btn btn-primary btn-sm" data-action="set-pin" data-id="${r.id}">Set New PIN</button>
+                <button class="btn btn-sm" data-action="decline" data-id="${r.id}">Decline</button>
+            </div>` : '';
+
+        return `
+            <div class="event-card" style="border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:0.75rem;">
+                <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                    <strong>${escapeHtml(r.memberName || 'Unknown member')}</strong>
+                    <span style="color:var(--text-secondary); font-size:0.85rem;">${formatDate(r.createdAt)}</span>
+                </div>
+                <div style="margin-top:0.35rem; font-size:0.9rem;">${contact}</div>
+                ${r.reason ? `<div style="margin-top:0.35rem; font-size:0.9rem; color:var(--text-secondary);">“${escapeHtml(r.reason)}”</div>` : ''}
+                ${isPending ? '' : `<div style="margin-top:0.35rem; font-size:0.85rem; color:var(--text-secondary);">${r.status === 'resolved' ? 'PIN set' : 'Declined'}${r.resolvedBy ? ` by ${escapeHtml(r.resolvedBy)}` : ''}${r.resolvedAt ? ` on ${formatDate(r.resolvedAt)}` : ''}</div>`}
+                ${actions}
+            </div>`;
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    async function loadPinRequests() {
+        const listEl = document.getElementById('pin-resets-list');
+        const historyEl = document.getElementById('pin-resets-history');
+        if (!listEl || !historyEl) return;
+
+        listEl.innerHTML = '<p class="empty-state">Loading...</p>';
+        historyEl.innerHTML = '';
+
+        let snap;
+        try {
+            snap = await db.collection('pinResetRequests').orderBy('createdAt', 'desc').limit(100).get();
+        } catch (err) {
+            console.error('Could not load PIN requests:', err);
+            listEl.innerHTML = '<p class="empty-state">Could not load requests.</p>';
+            return;
+        }
+
+        const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const pending = all.filter(r => r.status === 'pending');
+        const handled = all.filter(r => r.status !== 'pending').slice(0, 20);
+
+        updatePinRequestBadge(pending.length);
+
+        listEl.innerHTML = pending.length
+            ? pending.map(r => pinRequestCard(r, true)).join('')
+            : '<p class="empty-state">No open requests.</p>';
+
+        document.getElementById('pin-resets-history-section').style.display = handled.length ? '' : 'none';
+        historyEl.innerHTML = handled.map(r => pinRequestCard(r, false)).join('');
+    }
+
+    function updatePinRequestBadge(count) {
+        const badge = document.getElementById('pin-reset-badge');
+        if (!badge) return;
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.classList.toggle('hidden', count === 0);
+    }
+
+    async function refreshPinRequestBadge() {
+        if (!canAccess('pin-resets')) return;
+        try {
+            const snap = await db.collection('pinResetRequests').where('status', '==', 'pending').get();
+            updatePinRequestBadge(snap.size);
+        } catch (err) {
+            console.warn('Could not refresh PIN request badge:', err);
+        }
+    }
+
+    async function openSetPinModal(requestId) {
+        const ref = db.collection('pinResetRequests').doc(requestId);
+        const snap = await ref.get();
+        if (!snap.exists) {
+            showToast('That request no longer exists.', 'error');
+            return;
+        }
+        const r = snap.data();
+
+        document.getElementById('modal-title').textContent = 'Set a new PIN';
+        document.getElementById('modal-body').innerHTML = `
+            <p style="margin-bottom:1rem;">Set a 4-digit PIN for <strong>${escapeHtml(r.memberName)}</strong>.</p>
+            <p style="background:var(--bg-color, #f6f6f6); border-radius:8px; padding:0.75rem; margin-bottom:1rem; font-size:0.9rem;">
+                Confirm you are speaking to the member before continuing — use the contact details on the request to verify.
+            </p>
+            <form id="set-pin-form">
+                <input type="hidden" id="set-pin-request-id" value="${escapeHtml(requestId)}">
+                <input type="hidden" id="set-pin-member-id" value="${escapeHtml(r.memberId)}">
+                <div class="form-group">
+                    <label for="set-pin-input">New 4-digit PIN</label>
+                    <input type="password" id="set-pin-input" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" placeholder="1234" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="set-pin-confirm">Confirm PIN</label>
+                    <input type="password" id="set-pin-confirm" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" placeholder="1234" required autocomplete="off">
+                </div>
+                <p id="set-pin-error" class="error-message"></p>
+                <div class="editor-actions">
+                    <button type="submit" class="btn btn-primary" id="set-pin-submit">Set PIN</button>
+                    <button type="button" class="btn" id="set-pin-cancel">Cancel</button>
+                </div>
+            </form>`;
+
+        document.getElementById('modal-overlay').classList.remove('hidden');
+
+        document.getElementById('set-pin-cancel').addEventListener('click', closeModal);
+        document.getElementById('set-pin-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const errorEl = document.getElementById('set-pin-error');
+            const submitBtn = document.getElementById('set-pin-submit');
+            const pin = document.getElementById('set-pin-input').value.trim();
+            const confirmPin = document.getElementById('set-pin-confirm').value.trim();
+            const memberId = document.getElementById('set-pin-member-id').value;
+
+            errorEl.textContent = '';
+
+            if (!isValidPin(pin)) {
+                errorEl.textContent = 'The PIN must be exactly 4 digits.';
+                return;
+            }
+            if (pin !== confirmPin) {
+                errorEl.textContent = 'The two PINs do not match.';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                await resetMemberPinByAdmin(memberId, pin);
+                await completePinRequest(requestId, { status: 'resolved' });
+                closeModal();
+                showPinHandedOff(r.memberName, pin);
+                loadPinRequests();
+            } catch (err) {
+                console.error('Admin PIN reset failed:', err);
+                errorEl.textContent = 'Could not save the PIN: ' + err.message;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Set PIN';
+            }
+        });
+    }
+
+    function showPinHandedOff(memberName, pin) {
+        document.getElementById('modal-title').textContent = 'PIN set';
+        document.getElementById('modal-body').innerHTML = `
+            <p style="margin-bottom:1rem;">The new PIN for <strong>${escapeHtml(memberName)}</strong> is:</p>
+            <p style="font-size:2.5rem; font-weight:700; text-align:center; letter-spacing:0.4rem; margin:1rem 0; color:var(--primary);">${escapeHtml(pin)}</p>
+            <p style="background:var(--bg-color, #f6f6f6); border-radius:8px; padding:0.75rem; font-size:0.9rem;">
+                Read this out to the member now, or send it to them yourself. It is not stored anywhere in plain text, so you will not be able to look it up again.
+            </p>
+            <div class="editor-actions" style="margin-top:1rem;">
+                <button class="btn btn-primary" id="pin-handoff-done">Done</button>
+            </div>`;
+        document.getElementById('modal-overlay').classList.remove('hidden');
+        document.getElementById('pin-handoff-done').addEventListener('click', closeModal);
+    }
+
+    async function declinePinRequest(requestId) {
+        const ref = db.collection('pinResetRequests').doc(requestId);
+        const snap = await ref.get();
+        if (!snap.exists) {
+            showToast('That request no longer exists.', 'error');
+            return;
+        }
+        await completePinRequest(requestId, { status: 'declined' });
+        showToast(`Declined ${snap.data().memberName}'s request.`, 'success');
+        loadPinRequests();
+    }
+
+    document.getElementById('pin-resets-list').addEventListener('click', async e => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const { action, id } = btn.dataset;
+        btn.disabled = true;
+        try {
+            if (action === 'set-pin') await openSetPinModal(id);
+            else if (action === 'decline') await declinePinRequest(id);
+        } catch (err) {
+            console.error('PIN request action failed:', err);
+            showToast('Something went wrong: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
     async function loadDashboard() {
         const membersSnap = await db.collection('members').get();
         const eventsSnap = await db.collection('events').where('date', '>=', new Date().toISOString().split('T')[0]).get();
@@ -1581,7 +2087,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="birthday-card">
                     ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
                     <h3>${m.firstName} ${m.lastName}</h3>
-                    <p>Happy Birthday! 🎉</p>
+                    <p>Happy Birthday! ðŸŽ‰</p>
                     <button class="btn btn-secondary btn-sm" onclick="showFlyer('${m.id}')">Generate Flyer</button>
                 </div>
             `).join('');
@@ -1597,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="birthday-card">
                     ${m.photo ? `<img src="${m.photo}" class="birthday-avatar" alt="${m.firstName}">` : `<div class="birthday-avatar">${getInitials(m.firstName, m.lastName)}</div>`}
                     <h3>${m.firstName} ${m.lastName}</h3>
-                    <p>Happy Birthday! 🎉</p>
+                    <p>Happy Birthday! ðŸŽ‰</p>
                 </div>
             `).join('');
         } else {
@@ -1668,7 +2174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${m.photo ? `<img src="${m.photo}" class="member-photo" alt="${m.firstName}">` : `<div class="member-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-info">
                         <h3>${m.firstName} ${m.lastName}</h3>
-                        <p class="member-birthday">🎂 ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</p>
+                        <p class="member-birthday">ðŸŽ‚ ${m.dob ? new Date(m.dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</p>
                         ${m.phone ? `<p class="member-contact">${m.phone}</p>` : ''}
                     </div>
                     ${isBirthdayToday(m.dob) ? '<span class="birthday-badge">Today!</span>' : ''}
@@ -1695,14 +2201,14 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = `
             <div class="member-detail">
                 <div style="margin-bottom: 1rem;">
-                    <button class="btn btn-sm" onclick="navigate('members')">← Back to Members</button>
+                    <button class="btn btn-sm" onclick="navigate('members')">â† Back to Members</button>
                 </div>
                 <div class="member-header">
                     ${m.photo ? `<img src="${m.photo}" class="detail-photo" alt="${m.firstName}">` : `<div class="detail-photo">${getInitials(m.firstName, m.lastName)}</div>`}
                     <div class="member-header-info">
                         <h1>${m.firstName} ${m.lastName}</h1>
-                        <p class="birthday-text">🎂 Birthday: ${formatDate(m.dob)}</p>
-                        ${isBirthdayToday(m.dob) ? '<span class="birthday-badge large">Birthday Today! 🎉</span>' : ''}
+                        <p class="birthday-text">ðŸŽ‚ Birthday: ${formatDate(m.dob)}</p>
+                        ${isBirthdayToday(m.dob) ? '<span class="birthday-badge large">Birthday Today! ðŸŽ‰</span>' : ''}
                         <div class="header-actions">
                             <button class="btn btn-primary" onclick="showMemberForm('${m.id}')">Edit</button>
                             <button class="btn btn-secondary" onclick="showFlyer('${m.id}')">Generate Birthday Flyer</button>
@@ -1739,7 +2245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <tr>
                                     <td>${a.eventName}</td>
                                     <td>${formatDate(a.eventDate)}</td>
-                                    <td>${a.present ? '✅ Present' : '❌ Absent'}</td>
+                                    <td>${a.present ? 'âœ… Present' : 'âŒ Absent'}</td>
                                 </tr>
                             `).join('')}
                         </table>
@@ -1790,6 +2296,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label for="memberPin">${id ? 'Reset PIN' : 'PIN *'}</label>
+                    <input type="password" id="memberPin" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" placeholder="1234" ${id ? '' : 'required'}>
+                    <p class="form-hint">${id ? 'Leave blank to keep the current PIN.' : 'The member needs this 4-digit PIN to verify their identity.'}</p>
+                </div>
+
                 <h2 class="section-title">Birthday Photo</h2>
                 <div class="form-group">
                     <label for="memberPhoto">Upload Photo</label>
@@ -1838,6 +2350,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             showToast('Saving member...', 'success');
 
+            const pin = document.getElementById('memberPin').value.trim();
+            if (!id && !isValidPin(pin)) {
+                showToast('Enter a 4-digit PIN for the new member.', 'error');
+                return;
+            }
+
             const data = {
                 firstName: document.getElementById('firstName').value.trim(),
                 lastName: document.getElementById('lastName').value.trim(),
@@ -1866,14 +2384,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (id) {
                     await db.collection('members').doc(id).update(data);
-                    showToast('Member updated!');
+                    if (isValidPin(pin)) {
+                        await setMemberPin(id, pin);
+                        showToast('Member and PIN updated!');
+                    } else {
+                        showToast('Member updated!');
+                    }
                 } else {
                     const dup = await checkDuplicateMember(data.firstName, data.lastName, data.email, data.phone);
                     if (dup) {
                         showToast(dup, 'error');
                         return;
                     }
-                    await db.collection('members').add(data);
+                    const ref = await db.collection('members').add(data);
+                    await setMemberPin(ref.id, pin);
                     showToast('Member added!');
                 }
 
@@ -1889,6 +2413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete this member? This cannot be undone.')) return;
         try {
             await db.collection('members').doc(id).delete();
+            await db.collection('memberPin').doc(id).delete().catch(() => {});
             showToast('Member deleted');
             navigate('members');
         } catch (err) {
@@ -1931,8 +2456,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="event-details">
                     <h3>${e.name}</h3>
                     ${e.description ? `<p>${e.description.substring(0, 100)}${e.description.length > 100 ? '...' : ''}</p>` : ''}
-                    ${e.time ? `<span class="event-time">🕐 ${e.time}</span>` : ''}
-                    ${e.location ? `<span class="event-location">📍 ${e.location}</span>` : ''}
+                    ${e.time ? `<span class="event-time">ðŸ• ${e.time}</span>` : ''}
+                    ${e.location ? `<span class="event-location">ðŸ“ ${e.location}</span>` : ''}
                     ${isPast ? `<span class="event-attendance">${e.attendanceCount || 0} attended</span>` : ''}
                 </div>
                 <button class="btn btn-sm" onclick="navigate('event-detail', {id: '${e.id}'})">${isPast ? 'View' : 'Manage Attendance'}</button>
@@ -2041,8 +2566,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="event-header-info">
                         <h1>${event.name}</h1>
-                        ${event.time ? `<p class="event-time">🕐 ${event.time}</p>` : ''}
-                        ${event.location ? `<p class="event-location">📍 ${event.location}</p>` : ''}
+                        ${event.time ? `<p class="event-time">ðŸ• ${event.time}</p>` : ''}
+                        ${event.location ? `<p class="event-location">ðŸ“ ${event.location}</p>` : ''}
                         ${event.description ? `<p class="event-desc">${event.description}</p>` : ''}
                         <div class="header-actions">
                             <button class="btn btn-danger" onclick="deleteEvent('${event.id}')">Delete Event</button>
@@ -2155,7 +2680,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
 
-        title.textContent = '🎂 Birthday Flyer Generator';
+        title.textContent = 'ðŸŽ‚ Birthday Flyer Generator';
 
         body.innerHTML = `
             <div class="flyer-preview">
@@ -2170,7 +2695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="wish">Wish</option>
                             <option value="photo">Photo</option>
                         </select>
-                        <button type="button" id="flyer-new-wish" class="btn btn-sm">🎲 New Wish</button>
+                        <button type="button" id="flyer-new-wish" class="btn btn-sm">ðŸŽ² New Wish</button>
                         <button type="button" id="flyer-reset-btn" class="btn btn-sm">Reset</button>
                     </div>
                     <div class="flyer-control-row">
@@ -2423,9 +2948,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatWeekLabel(monday, sunday) {
         const sameMonth = monday.getMonth() === sunday.getMonth() && monday.getFullYear() === sunday.getFullYear();
         if (sameMonth) {
-            return `${monday.toLocaleDateString('en-US', { month: 'short' })} ${monday.getDate()} – ${sunday.getDate()}, ${sunday.getFullYear()}`;
+            return `${monday.toLocaleDateString('en-US', { month: 'short' })} ${monday.getDate()} â€“ ${sunday.getDate()}, ${sunday.getFullYear()}`;
         }
-        return `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${sunday.getFullYear()}`;
+        return `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} â€“ ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${sunday.getFullYear()}`;
     }
 
     function loadImage(src) {
@@ -2450,10 +2975,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function fitText(ctx, text, maxWidth) {
         if (ctx.measureText(text).width <= maxWidth) return text;
         let t = text;
-        while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) {
+        while (t.length > 1 && ctx.measureText(t + 'â€¦').width > maxWidth) {
             t = t.slice(0, -1);
         }
-        return t + '…';
+        return t + 'â€¦';
     }
 
     async function renderBirthdayCalendar() {
@@ -2575,7 +3100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (list.length === 0) {
                 ctx.fillStyle = '#6B7280';
                 ctx.font = '600 18px Arial, sans-serif';
-                ctx.fillText('—', x + colW / 2, ty + 8);
+                ctx.fillText('â€”', x + colW / 2, ty + 8);
             } else {
                 const MAX_SHOW = 4;
                 list.slice(0, MAX_SHOW).forEach(item => {
@@ -2596,7 +3121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Footer
         ctx.fillStyle = '#B8C1D8';
         ctx.font = '600 23px Arial, sans-serif';
-        ctx.fillText('🎉 Happy Birthday to our members this week! Let\'s celebrate together 🎉', W / 2, H - 66);
+        ctx.fillText('ðŸŽ‰ Happy Birthday to our members this week! Let\'s celebrate together ðŸŽ‰', W / 2, H - 66);
         ctx.fillStyle = '#6B7280';
         ctx.font = '500 17px Arial, sans-serif';
         ctx.fillText('Ignite Chapel', W / 2, H - 38);
@@ -2614,7 +3139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Calendar downloaded!');
     }
 
-    // ─── User Management ──────────────────────────────────────────────
+    // â”€â”€â”€ User Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function loadUserManagement() {
         if (!isSuperAdmin()) return;
         const container = document.getElementById('user-management-list');
@@ -2631,9 +3156,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roleBadge = isTargetSuperAdmin ? '<span class="role-badge superadmin">Super Admin</span>' : '<span class="role-badge admin">Admin</span>';
                 const perms = (u.permissions || []).map(p => `<span class="perm-badge">${PERMISSION_LABELS[p] || p}</span>`).join(' ');
                 html += `<tr>
-                    <td>${u.email || '—'}${isMe ? ' <small>(you)</small>' : ''}</td>
+                    <td>${u.email || 'â€”'}${isMe ? ' <small>(you)</small>' : ''}</td>
                     <td>${roleBadge}</td>
-                    <td class="perm-cell">${perms || '—'}</td>
+                    <td class="perm-cell">${perms || 'â€”'}</td>
                     <td class="actions-cell">
                         ${!isTargetSuperAdmin ? `<button class="btn btn-sm" onclick="openEditUserPermissions('${uid}', '${u.email}')">Edit</button>` : ''}
                         ${!isTargetSuperAdmin && !isMe ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}', '${u.email}')">Remove</button>` : ''}
@@ -2726,7 +3251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('modal-overlay');
         const title = document.getElementById('modal-title');
         const body = document.getElementById('modal-body');
-        title.textContent = `Edit Permissions — ${email}`;
+        title.textContent = `Edit Permissions â€” ${email}`;
         db.collection('users').doc(uid).get().then(doc => {
             if (!doc.exists) { showToast('User not found.', 'error'); return; }
             const u = doc.data();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ignite-chapel-v1';
+const CACHE_NAME = 'ignite-chapel-v3';
 const PRECACHE = [
   '/',
   '/index.html',
@@ -39,7 +39,26 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache-first for app shell, network-first fallback
+  // Network-first for code and config. These change on every deploy, and serving
+  // them from the cache first would pin users to a stale app.js/firebase-config.js
+  // until the cache name is bumped again.
+  const isShell = event.request.mode === 'navigate' ||
+    /\.(?:js|css|html)$/.test(new URL(event.request.url).pathname);
+
+  if (isShell) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, images), refreshed in the background
   event.respondWith(
     caches.match(event.request).then(cached => {
       const fetched = fetch(event.request).then(response => {
