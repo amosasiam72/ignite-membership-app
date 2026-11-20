@@ -3267,7 +3267,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
         if (!email || !password) { errorEl.textContent = 'Email and password are required.'; return; }
         errorEl.textContent = 'Creating user...';
         try {
-            const res = await fetch('http://localhost:3001/createAdmin', {
+            const res = await fetch('/createAdmin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, displayName, permissions: perms })
@@ -3279,7 +3279,7 @@ const ALL_PERMISSIONS = ['dashboard', 'members', 'pin-resets', 'birthdays', 'eve
             closeModal();
         } catch (err) {
             if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-                errorEl.textContent = 'Admin server not running. Start it with: node admin-server.mjs';
+                errorEl.textContent = 'Admin endpoint unavailable. Ensure the server is running.';
             } else {
                 errorEl.textContent = err.message;
             }

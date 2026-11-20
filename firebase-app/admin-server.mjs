@@ -1,7 +1,7 @@
 import http from 'http';
 
-const API_KEY = 'AIzaSyB3t8hT8mnXh8bqw5QsO1rYDaO3-MfX8fE';
-const PROJECT_ID = 'ignite-chapel-membership-app';
+const API_KEY = process.env.FIREBASE_API_KEY || '';
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'ignite-chapel-membership-app';
 
 function cors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
